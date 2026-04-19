@@ -12,17 +12,18 @@ export class CameraController {
 
   setupControls() {
     this.controls.enableDamping = true;
-    // Tăng damping để giảm độ trôi/inertia
+
+    this.controls.minDistance = 50;
+    this.controls.maxDistance = 2000;
+
     this.controls.dampingFactor = 0.14;
-    // Giảm tốc độ xoay và thu phóng để bớt nhạy trên cảm ứng
+
     this.controls.rotateSpeed = 0.3;
     this.controls.zoomSpeed = 0.6;
 
-    // Giới hạn góc nghiêng để vuốt lên/xuống bớt nhạy và không bị lật
     this.controls.minPolarAngle = 0.35; // ~20°
     this.controls.maxPolarAngle = Math.PI - 0.35; // ~160°
 
-    // Tắt panning (kéo camera) cho cả desktop và mobile
     this.controls.enablePan = false;
   }
 

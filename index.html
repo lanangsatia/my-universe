@@ -379,12 +379,15 @@
     <canvas id="canvas"
         style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10;pointer-events:none;"></canvas>
     <div class="stars-bg"></div>
+    <div id="darkCloudBg" class="dark-cloud-bg"></div>
+    <div id="cloudTransition" class="cloud-transition"></div>
 
     <!-- QUESTION PANEL -->
     <div id="questionPanel" class="overlay-panel">
         <div class="panel-content">
+            <h2>Happy Anniversary Bubuyy 😘</h2>
             <h2>Do you want to see our memories?</h2>
-            <div>
+            <div class="btn-group">
                 <button id="btnYes">Of course 😍</button>
                 <button id="noBtn" onclick="moveNoBtn()">No way 🙂‍↔️</button>
             </div>
@@ -483,7 +486,7 @@
     </div>
 
     <!-- Help icon -->
-    <div class="help-icon">
+    <div class="help-icon" style="display:none;">
         <i class="fas fa-question-circle"></i>
     </div>
 
@@ -566,24 +569,63 @@
         const btnYes = document.getElementById("btnYes");
         const helpPanel = document.querySelector('.help-panel');
 
+
+
         // Klik Yes --> hilangkan panel
+        // btnYes.addEventListener("click", (e) => {
+        //     e.stopPropagation(); // cegah event bubble ke document listener
+        //     panel.style.display = "none"; // sembunyikan panel
+        //     cloud.classList.add("active");
+        //     audioManager.playOnly();
+        //     cameraController.triggerAnimation();
+
+        //     // helpPanel.classList.add('center');
+        //     // helpPanel.classList.add('active');
+
+        // });
+
         btnYes.addEventListener("click", (e) => {
-            e.stopPropagation(); // cegah event bubble ke document listener
-            panel.style.display = "none"; // sembunyikan panel
-            // helpPanel.classList.add('center');
-            // helpPanel.classList.add('active');
-            audioManager.playOnly();
+            e.stopPropagation();
+
+            const darkCloud = document.getElementById("darkCloudBg");
+
+            // 🎥 STAGE 1 — CAMERA PULL START (langsung dari awal klik)
             cameraController.triggerAnimation();
+
+            // 🌑 STAGE 2 — DARK CLOUD START DISSOLVE (bukan muncul putih)
+            if (darkCloud) {
+                darkCloud.classList.add("fade-out");
+            }
+
+
+            panel.style.display = "none";
+
+            setTimeout(() => {
+                if (darkCloud) darkCloud.style.display = "none";
+            }, 2000);
+
+            audioManager.playOnly();
         });
 
         // Fungsi untuk memindahkan tombol "Tidak"
         function moveNoBtn() {
             const btn = document.getElementById("noBtn");
-            const x = Math.random() * window.innerWidth * 0.8;
-            const y = Math.random() * window.innerHeight * 0.8;
-            btn.style.left = x + 'px';
-            btn.style.top = y + 'px';
+            const container = document.querySelector(".panel-content");
+
+            const rect = container.getBoundingClientRect();
+
+            const padding = 10;
+
+            const maxX = rect.width - btn.offsetWidth - padding;
+            const maxY = rect.height - btn.offsetHeight - padding;
+
+            const x = Math.random() * maxX;
+            const y = Math.random() * maxY;
+
+            btn.style.left = `${x}px`;
+            btn.style.top = `${y}px`;
         }
+
 
         function isMobileDevice() {
             // Kiểm tra user agent cho mobile và tablet
@@ -813,7 +855,7 @@
         window.addEventListener('dblclick', (event) => {
             event.preventDefault();
             if (document.getElementById('questionPanel').style.display === 'none') {
-                cameraController.triggerAnimation();
+                // cameraController.triggerAnimation();
                 return;
             }
 
@@ -868,7 +910,7 @@
 
                 // Trigger the same actions as double click
                 if (document.getElementById('questionPanel').style.display === 'none') {
-                    cameraController.triggerAnimation();
+                    // cameraController.triggerAnimation();
                     return;
                 }
 
