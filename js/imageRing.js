@@ -41,6 +41,13 @@ export class FlowerRingSystem {
 
     this.createFlowerRing();
 
+    // === LISTEN FOR UPDATES ===
+    window.addEventListener('update_photos', (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        this.preloadTextures(e.detail);
+      }
+    });
+
     // === MEMORY PRESSURE HANDLING ===
     this.setupMemoryPressureHandling();
   }
@@ -249,7 +256,7 @@ export class FlowerRingSystem {
     this.flowers.forEach((sprite) => {
       const randomTexture =
         this.flowerTextures[
-          Math.floor(Math.random() * this.flowerTextures.length)
+        Math.floor(Math.random() * this.flowerTextures.length)
         ];
       const material = this.getMaterialFromCache(randomTexture);
 
@@ -339,7 +346,7 @@ export class FlowerRingSystem {
 
         // 2) Setelah sprite ada, preload banyak gambar lalu randomize material
         const textureList = Array.from(
-          { length: 32 },
+          { length: 5 },
           (_, i) => `assets/images/photo${i + 1}.jpeg`,
         );
 
@@ -797,7 +804,7 @@ export class FlowerRingSystem {
               (currentTime -
                 flower.userData.startTime -
                 flower.userData.delay * 1000) /
-                this.flyingConfig.duration,
+              this.flyingConfig.duration,
             );
 
             // Easing function mượt mà hơn cho chuyển động bong bóng
@@ -807,17 +814,17 @@ export class FlowerRingSystem {
             const floatY =
               Math.sin(
                 currentTime * this.flyingConfig.floatSpeed +
-                  flower.userData.floatOffset,
+                flower.userData.floatOffset,
               ) * this.flyingConfig.swayAmount;
             const swayX =
               Math.sin(
                 currentTime * this.flyingConfig.swaySpeed +
-                  flower.userData.swayOffset,
+                flower.userData.swayOffset,
               ) * this.flyingConfig.swayAmount;
             const swayZ =
               Math.cos(
                 currentTime * this.flyingConfig.swaySpeed +
-                  flower.userData.swayOffset,
+                flower.userData.swayOffset,
               ) * this.flyingConfig.swayAmount;
 
             // Cập nhật vị trí với chuyển động mượt mà

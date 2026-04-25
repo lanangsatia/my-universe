@@ -1957,3 +1957,15 @@ select#textAppearEffect {
     transform: scale(1.08);
     filter: blur(80px);
 }
+
+#greetingText{
+    min-width: 350px;
+    text-align: center;
+    margin: 0 auto;
+}
+
+#questionText {
+    min-width: 350px;
+    text-align: center;
+    margin: 0 auto;
+}

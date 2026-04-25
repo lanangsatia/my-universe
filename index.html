@@ -33,6 +33,7 @@
 
     <script type="module" src="js/heartText.js"></script>
     <script type="module" src="js/nebula-system.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Universe</title>
@@ -295,6 +296,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script>
         function showErrorToast(msg) {
@@ -385,8 +388,8 @@
     <!-- QUESTION PANEL -->
     <div id="questionPanel" class="overlay-panel">
         <div class="panel-content">
-            <h2>Happy Anniversary Bubuyy 😘</h2>
-            <h2>Do you want to see our memories?</h2>
+            <h2 id="greetingText">Happy Anniversary Bubuyy 😘</h2>
+            <h2 id="questionText">Do you want to see our memories?</h2>
             <div class="btn-group">
                 <button id="btnYes">Of course 😍</button>
                 <button id="noBtn" onclick="moveNoBtn()">No way 🙂‍↔️</button>
@@ -840,7 +843,9 @@
             if (loadingOverlay) {
                 // Chỉ auto-hide cho web cha; web con sẽ để sphere.js quản lý
                 const hash = window.location.hash;
-                const isChildWeb = hash.startsWith('#config=') || hash.startsWith('#id=');
+                const urlParams = new URLSearchParams(window.location.search);
+                const isChildWeb = hash.startsWith('#config=') || hash.startsWith('#id=') || urlParams.has('id');
+                
                 if (!isChildWeb) {
                     loadingOverlay.style.opacity = '0';
                     loadingOverlay.style.transition = 'opacity 0.8s ease-out';
