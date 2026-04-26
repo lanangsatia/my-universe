@@ -4,13 +4,13 @@ import { SERVER_URL_PROD } from "./config.js";
 
 // Khởi tạo Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyDN3YxOpqxqfBQgHOvtFk6JJvztlV3vTH8",
-  authDomain: "deargift-e6488.firebaseapp.com",
-  projectId: "deargift-e6488",
-  storageBucket: "deargift-e6488.appspot.com",
-  messagingSenderId: "391379008795",
-  appId: "1:391379008795:web:4b1c98f17f824690e2e7be",
-  measurementId: "G-VGBLRMQM9L",
+    apiKey: "AIzaSyDzbRlY-OxLJJSp6jJPGqz6MTNzYegBuGk",
+    authDomain: "my-universe-ae366.firebaseapp.com",
+    projectId: "my-universe-ae366",
+    storageBucket: "my-universe-ae366.firebasestorage.app",
+    messagingSenderId: "627784339059",
+    appId: "1:627784339059:web:3ba09b3b40b2f7d66e2406",
+    measurementId: "G-TN805V3TQ5"
 };
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);

@@ -11,7 +11,7 @@ export class HeartText {
 
     // Configuration options
     this.config = {
-      text: 'To My Beloved \"Ririn Setyaningsih\"',
+      text: 'Our Momments',
       size: 30,
       height: 2,
       curveSegments: 12,
@@ -20,7 +20,7 @@ export class HeartText {
       bevelSize: 0.2,
       bevelOffset: 0,
       bevelSegments: 5,
-      position: { x: 0, y: 350, z: 0 },
+      position: { x: 0, y: 150, z: 0 },
       color: 0xffffff, // Trắng
       emissiveColor: 0xffffff, // warna text
       emissiveIntensity: 0.5,
@@ -163,7 +163,7 @@ export class HeartText {
     // Phát sự kiện khi text3D sẵn sàng (để web con biết đã render xong)
     try {
       document.dispatchEvent(new CustomEvent("hearttext_ready"));
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // Xóa hàm autoWrapText (không cần wrap tự động nữa)
@@ -330,7 +330,7 @@ export class HeartText {
           mesh.position.y =
             baseY +
             Math.sin(time * 2 * this.config.effectSpeed) *
-              (5 * this.config.effectIntensity);
+            (5 * this.config.effectIntensity);
           mesh.rotation.y =
             Math.sin(time * 0.5 * this.config.effectSpeed) *
             (0.1 * this.config.effectIntensity);
@@ -358,8 +358,8 @@ export class HeartText {
           const scale =
             1 +
             Math.sin(time * 3 * this.config.effectSpeed) *
-              0.1 *
-              this.config.effectIntensity;
+            0.1 *
+            this.config.effectIntensity;
           const scaleZ = this.config.height < 1 ? this.config.height : scale;
           mesh.scale.set(scale, scale, scaleZ);
         });

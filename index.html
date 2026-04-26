@@ -389,7 +389,7 @@
     <div id="questionPanel" class="overlay-panel">
         <div class="panel-content">
             <h2 id="greetingText">Happy Anniversary Bubuyy 😘</h2>
-            <h2 id="questionText">Do you want to see our memories?</h2>
+            <h2 id="questionText">Do you want to see our moments?</h2>
             <div class="btn-group">
                 <button id="btnYes">Of course 😍</button>
                 <button id="noBtn" onclick="moveNoBtn()">No way 🙂‍↔️</button>
@@ -719,7 +719,6 @@
         import { FlowerRingSystem } from './js/imageRing.js';
         import { CameraController } from './js/camera.js';
         import { Heart } from './js/modelGlb.js';
-        import { processPayment, createPaymentModal, showToast, initWebSocket } from './js/payment.js';
         import { EffectComposer } from 'https://unpkg.com/three@0.152.2/examples/jsm/postprocessing/EffectComposer.js';
         import { RenderPass } from 'https://unpkg.com/three@0.152.2/examples/jsm/postprocessing/RenderPass.js';
         import { UnrealBloomPass } from 'https://unpkg.com/three@0.152.2/examples/jsm/postprocessing/UnrealBloomPass.js';
@@ -845,7 +844,7 @@
                 const hash = window.location.hash;
                 const urlParams = new URLSearchParams(window.location.search);
                 const isChildWeb = hash.startsWith('#config=') || hash.startsWith('#id=') || urlParams.has('id');
-                
+
                 if (!isChildWeb) {
                     loadingOverlay.style.opacity = '0';
                     loadingOverlay.style.transition = 'opacity 0.8s ease-out';
@@ -1067,7 +1066,7 @@
                         // Zoom out camera để nhìn thấy text rõ hơn
                         if (window.cameraController) {
                             // Kiểm tra trạng thái trái tim để điều chỉnh vị trí camera
-                            const heartEnabled = document.getElementById('enableCentralHeart')?.checked ||
+                            const heartEnabled = (window.dashboard && window.dashboard.userData && window.dashboard.userData.centralHeartEnabled) ||
                                 (window.heart3D && window.heart3D.visible);
 
                             // Vị trí z khác nhau dựa trên trạng thái trái tim
@@ -1172,12 +1171,6 @@
                 document.body.classList.add('web-cha');
             }
 
-            // Chỉ tạo modal thanh toán khi ở web cha (không có #config= hoặc #id=)
-            if (!hash.startsWith('#config=') && !hash.startsWith('#id=')) {
-                // Khởi tạo modal thanh toán chỉ cho web cha
-                createPaymentModal();
-            }
-
             // Xử lý cho web con (có #config= hoặc #id=)
             if (hash.startsWith('#config=') || hash.startsWith('#id=')) {
                 // Ẩn nút Google login triệt để
@@ -1213,8 +1206,6 @@
             //     }, 1000);
             // }
 
-            // Khởi tạo WebSocket khi trang load
-            initWebSocket();
         });
 
         // Hàm hiển thị bảng hướng dẫn nhanh

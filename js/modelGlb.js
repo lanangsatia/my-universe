@@ -33,17 +33,20 @@ export class Heart {
         this.modelGroup.position.set(0, 115, 0);
 
         // Thêm group vào scene thay vì thêm model trực tiếp
+        this.modelGroup.visible = false; // Hide by default
         this.scene.add(this.modelGroup);
 
         // Lưu reference vào window để có thể truy cập từ sphere.js
         window.heart3D = this.modelGroup;
 
-        // Áp dụng trạng thái ban đầu berdasarkan status checkbox
-        const enableCentralHeart =
-          document.getElementById("enableCentralHeart");
-        const heartInitialState = enableCentralHeart
-          ? enableCentralHeart.checked
-          : false;
+        // Áp dụng trạng thái ban đầu
+        let heartInitialState = false;
+        if (window.dashboard && window.dashboard.userData) {
+          heartInitialState = window.dashboard.userData.centralHeartEnabled;
+        } else {
+          const enableCentralHeart = document.getElementById("enableCentralHeart");
+          if (enableCentralHeart) heartInitialState = enableCentralHeart.checked;
+        }
         if (
           window.centralSphere &&
           window.centralSphere.applyCentralHeartState
