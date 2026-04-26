@@ -49,11 +49,13 @@ const PRESETS = {
     },
     'deep-space': {
         name: 'Deep Space', globeColor: '#4c1d95', particleColor: '#8B5CF6', diskColor: '#4c1d95',
-        innerDiskColor: '#ede9fe', outermostColor: '#8B5CF6', backgroundColor: '#8B5CF6', isGradient: false
+        innerDiskColor: '#ede9fe', outermostColor: '#8B5CF6', backgroundColor: '#8B5CF6', isGradient: false,
+        meteorEnabled: true, meteorColor: '#8B5CF6', meteorSpeed: 12
     },
     'neon-cyber': {
         name: 'Cyberpunk', globeColor: '#f72585', particleColor: '#4cc9f0', diskColor: '#3a0ca3',
-        innerDiskColor: '#7209b7', outermostColor: '#4361ee', backgroundColor: '#4361ee', isGradient: true
+        innerDiskColor: '#7209b7', outermostColor: '#4361ee', backgroundColor: '#4361ee', isGradient: true,
+        meteorEnabled: true, meteorColor: '#4cc9f0', meteorSpeed: 18
     },
     'magic-forest': {
         name: 'Magic Forest', globeColor: '#2d6a4f', particleColor: '#95d5b2', diskColor: '#1b4332',
@@ -73,7 +75,8 @@ const PRESETS = {
     },
     'galaxy-classic': {
         name: 'Classic Galaxy', globeColor: '#5a189a', particleColor: '#ff00ff', diskColor: '#3c096c',
-        innerDiskColor: '#e0aaff', outermostColor: '#9d4edd', backgroundColor: '#ff00ff', isGradient: true
+        innerDiskColor: '#e0aaff', outermostColor: '#9d4edd', backgroundColor: '#ff00ff', isGradient: true,
+        meteorEnabled: true, meteorColor: '#ff00ff', meteorSpeed: 8
     },
     'soft-pastel': {
         name: 'Soft Pastel', globeColor: '#ffafcc', particleColor: '#a2d2ff', diskColor: '#ffc8dd',
@@ -105,7 +108,11 @@ const DEFAULT_DATA = {
     centralHeartEnabled: false,
     text3dEnabled: true,
     nebulaEnabled: false,
-    textColor: 0xffffff
+    textColor: 0xffffff,
+    meteorEnabled: false,
+    meteorColor: '#00f0ff',
+    meteorSpeed: 4,
+    meteorCount: 100
 };
 
 class Dashboard {
@@ -196,6 +203,26 @@ class Dashboard {
     applyDataToScene() {
         if (!this.userData) return;
 
+        // Apply meteor settings
+        // Set global variables first so meteors.js can pick them up if it loads later
+        window.isMeteorShowerActive = !!this.userData.meteorEnabled;
+        window.meteorColor = this.userData.meteorColor;
+        window.meteorSpeed = this.userData.meteorSpeed;
+
+        if (typeof window.setMeteorActive === 'function') {
+            window.setMeteorActive(!!this.userData.meteorEnabled);
+
+            if (typeof window.setMeteorColor === 'function' && this.userData.meteorColor) {
+                window.setMeteorColor(this.userData.meteorColor);
+            }
+            if (typeof window.setMeteorSpeed === 'function' && this.userData.meteorSpeed) {
+                window.setMeteorSpeed(this.userData.meteorSpeed);
+            }
+            if (typeof window.setMeteorDensity === 'function' && this.userData.meteorCount) {
+                window.setMeteorDensity(this.userData.meteorCount);
+            }
+        }
+
         // Texts
         const greetingTextElement = document.getElementById('greetingText');
         const questionTextElement = document.getElementById('questionText');
@@ -270,13 +297,14 @@ class Dashboard {
                     <span class="close-dashboard" id="close-dashboard-btn">&times;</span>
                 </div>
                 <div class="dashboard-tabs">
-                    <button class="tab-btn active" data-tab="tab-template">Templates</button>
-                    <button class="tab-btn" data-tab="tab-visual">Visuals</button>
-                    <button class="tab-btn" data-tab="tab-text">Texts</button>
+                    <button class="tab-btn active" data-tab="tab-style">Presets</button>
+                    <button class="tab-btn" data-tab="tab-visual">Visual</button>
+                    <button class="tab-btn" data-tab="tab-effects">Effects</button>
+                    <button class="tab-btn" data-tab="tab-text">Message</button>
                     <button class="tab-btn" data-tab="tab-photos">Photos</button>
                 </div>
                 <div class="dashboard-body">
-                    <div id="tab-template" class="tab-pane active">
+                    <div id="tab-style" class="tab-pane active">
                         <div class="preset-grid">
                             ${Object.keys(PRESETS).map(key => `
                                 <div class="preset-item" style="background:${PRESETS[key].globeColor}" onclick="window.dashboard.applyPreset('${key}')">
@@ -309,8 +337,35 @@ class Dashboard {
                         <div class="toggle-row">
                             <label><input type="checkbox" id="in-tog-heart" ${this.userData.centralHeartEnabled ? 'checked' : ''}> Central Heart</label>
                             <label><input type="checkbox" id="in-tog-text" ${this.userData.text3dEnabled !== false ? 'checked' : ''}> Show 3D Text</label>
-                            <label><input type="checkbox" id="in-tog-nebula" ${this.userData.nebulaEnabled ? 'checked' : ''}> Enable Nebula</label>
                             <label><input type="checkbox" id="in-tog-grad" ${this.userData.isGradient ? 'checked' : ''}> Gradient Globe</label>
+                        </div>
+                    </div>
+                    <div id="tab-effects" class="tab-pane">
+                        <div class="section-title">☄️ Meteor Shower</div>
+                        <div class="toggle-row" style="margin-bottom: 20px;">
+                            <label class="switch-label">
+                                <input type="checkbox" id="in-tog-meteor" ${this.userData.meteorEnabled ? 'checked' : ''}>
+                                Enable Meteor Shower
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Meteor Color</label>
+                            <input type="color" id="in-clr-meteor" value="${this.userData.meteorColor || '#00f0ff'}" style="width: 100%; height: 40px; border-radius: 10px; border: 1px solid #333;">
+                        </div>
+                        <div class="form-group">
+                            <label>Meteor Speed</label>
+                            <input type="range" id="in-val-mspeed" min="1" max="20" step="1" value="${this.userData.meteorSpeed || 4}">
+                            <div class="range-labels"><span>Slow</span><span>Fast</span></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Meteor Count</label>
+                            <input type="range" id="in-val-mcount" min="10" max="500" step="10" value="${this.userData.meteorCount || 200}">
+                            <div class="range-labels"><span>Few</span><span>Many</span></div>
+                        </div>
+                        
+                        <div class="section-title" style="margin-top: 30px;">🌌 Space Effects</div>
+                        <div class="toggle-row">
+                            <label><input type="checkbox" id="in-tog-nebula" ${this.userData.nebulaEnabled ? 'checked' : ''}> Enable Nebula Background</label>
                         </div>
                     </div>
                     <div id="tab-text" class="tab-pane">
@@ -342,29 +397,39 @@ class Dashboard {
             .dashboard-tabs { display: flex; padding: 0 24px; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
             .tab-btn { background: none; border: none; color: #666; padding: 12px 0; cursor: pointer; font-size: 0.9rem; border-bottom: 2px solid transparent; transition: 0.3s; }
             .tab-btn.active { color: #ff6b6b; border-bottom-color: #ff6b6b; }
-            .dashboard-body { padding: 24px; max-height: 60vh; overflow-y: auto; }
-            .tab-pane { display: none; }
+            .dashboard-body { padding: 24px; max-height: 60vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #333 transparent; }
+            .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             .tab-pane.active { display: block; }
+            .section-title { color: #fff; font-size: 0.9rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; opacity: 0.8; }
             .form-group { margin-bottom: 20px; }
             .form-group label { display: block; color: #888; margin-bottom: 8px; font-size: 0.85rem; }
-            .form-group input[type="text"] { width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; color: white; box-sizing: border-box; }
+            .form-group input[type="text"] { width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; color: white; box-sizing: border-box; transition: 0.3s; }
+            .form-group input[type="text"]:focus { border-color: #ff6b6b; outline: none; background: #222; }
             .color-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
             .f-group label { display: block; color: #888; margin-bottom: 8px; font-size: 0.85rem; }
-            .f-group input[type="color"] { width: 100%; height: 40px; background: none; border: 1px solid #333; border-radius: 8px; cursor: pointer; }
-            .toggle-row { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; }
-            .toggle-row label { color: #ccc; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+            .f-group input[type="color"] { width: 100%; height: 40px; background: none; border: 1px solid #333; border-radius: 10px; cursor: pointer; padding: 2px; }
+            .toggle-row { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+            .toggle-row label { color: #ccc; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 10px; transition: 0.2s; }
+            .toggle-row label:hover { background: rgba(255,255,255,0.06); }
+            .range-labels { display: flex; justify-content: space-between; margin-top: 6px; color: #555; font-size: 0.75rem; }
+            input[type="range"] { width: 100%; accent-color: #ff6b6b; height: 6px; background: #333; border-radius: 5px; cursor: pointer; }
             .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-            .preset-item { height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); transition: transform 0.2s; }
-            .preset-item:hover { transform: scale(1.02); }
-            .preset-item span { color: white; font-weight: 600; font-size: 0.85rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+            .preset-item { height: 60px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; position: relative; overflow: hidden; }
+            .preset-item::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(255,255,255,0.1), transparent); opacity: 0.5; }
+            .preset-item:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.2); box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+            .preset-item span { color: white; font-weight: 600; font-size: 0.85rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 1; }
             .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
-            .photo-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 1px solid #333; }
+            .photo-item { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 1px solid #333; transition: 0.3s; }
+            .photo-item:hover { transform: scale(1.05); z-index: 2; border-color: #ff6b6b; }
             .photo-item img { width: 100%; height: 100%; object-fit: cover; }
-            .btn-remove-photo { position: absolute; top: 4px; right: 4px; background: #ff4757; color: white; border: none; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 12px; }
-            .add-photo-btn { width: 100%; padding: 12px; background: #1a1a1a; border: 1px dashed #ff6b6b; color: #ff6b6b; border-radius: 12px; cursor: pointer; font-weight: 600; }
+            .btn-remove-photo { position: absolute; top: 4px; right: 4px; background: #ff4757; color: white; border: none; width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+            .add-photo-btn { width: 100%; padding: 14px; background: rgba(255,107,107,0.05); border: 1px dashed #ff6b6b; color: #ff6b6b; border-radius: 14px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+            .add-photo-btn:hover { background: rgba(255,107,107,0.1); transform: scale(1.01); }
             .dashboard-footer { padding: 24px; border-top: 1px solid rgba(255,255,255,0.05); }
-            .btn-save { width: 100%; padding: 14px; background: #ff6b6b; color: white; border: none; border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.3s; }
-            .btn-save:hover { background: #ff5252; transform: translateY(-2px); }
+            .btn-save { width: 100%; padding: 16px; background: linear-gradient(135deg, #ff6b6b, #ee5253); color: white; border: none; border-radius: 16px; font-weight: 700; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(255,107,107,0.2); }
+            .btn-save:hover { background: linear-gradient(135deg, #ff5252, #d63031); transform: translateY(-2px); box-shadow: 0 15px 30px rgba(255,107,107,0.3); }
+            .btn-save:active { transform: translateY(0); }
             .hidden { display: none; }
         `;
         document.head.appendChild(style);
@@ -402,7 +467,8 @@ class Dashboard {
             'in-greet', 'in-quest', 'in-globe',
             'in-clr-globe', 'in-clr-part', 'in-clr-disk', 'in-clr-inner', 'in-clr-outer', 'in-clr-bg',
             'in-tog-heart', 'in-tog-text', 'in-tog-nebula', 'in-tog-grad',
-            'in-val-size', 'in-val-pspeed'
+            'in-val-size', 'in-val-pspeed',
+            'in-tog-meteor', 'in-clr-meteor', 'in-val-mspeed', 'in-val-mcount'
         ];
 
         const heartTog = document.getElementById('in-tog-heart');
@@ -423,10 +489,13 @@ class Dashboard {
 
         inputs.forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.oninput = () => {
-                this.updateLocalData();
-                this.applyDataToScene();
-            };
+            if (el) {
+                const eventType = (el.type === 'checkbox' || el.type === 'range' || el.type === 'color') ? 'change' : 'input';
+                el.addEventListener(eventType, () => {
+                    this.updateLocalData();
+                    this.applyDataToScene();
+                });
+            }
         });
 
         document.getElementById('btn-add-photo').onclick = () => document.getElementById('photo-upload').click();
@@ -446,6 +515,11 @@ class Dashboard {
         this.userData.backgroundColor = preset.backgroundColor;
         this.userData.isGradient = preset.isGradient;
 
+        // Meteor settings from preset
+        if (preset.meteorEnabled !== undefined) this.userData.meteorEnabled = preset.meteorEnabled;
+        if (preset.meteorColor !== undefined) this.userData.meteorColor = preset.meteorColor;
+        if (preset.meteorSpeed !== undefined) this.userData.meteorSpeed = preset.meteorSpeed;
+
         const mappings = {
             'in-clr-globe': preset.globeColor,
             'in-clr-part': preset.particleColor,
@@ -453,7 +527,11 @@ class Dashboard {
             'in-clr-inner': preset.innerDiskColor,
             'in-clr-outer': preset.outermostColor,
             'in-clr-bg': preset.backgroundColor,
-            'in-tog-grad': preset.isGradient
+            'in-tog-grad': preset.isGradient,
+            'in-tog-meteor': preset.meteorEnabled || false,
+            'in-clr-meteor': preset.meteorColor || '#f6fe0cff',
+            'in-val-mspeed': preset.meteorSpeed || 4,
+            'in-val-mcount': preset.meteorCount || 100
         };
 
         Object.keys(mappings).forEach(id => {
@@ -483,6 +561,16 @@ class Dashboard {
         this.userData.isGradient = document.getElementById('in-tog-grad').checked;
         this.userData.size = parseFloat(document.getElementById('in-val-size').value);
         this.userData.particleSpeed = parseFloat(document.getElementById('in-val-pspeed').value);
+
+        // Meteor settings
+        const meteorTog = document.getElementById('in-tog-meteor');
+        const meteorClr = document.getElementById('in-clr-meteor');
+        const meteorSpd = document.getElementById('in-val-mspeed');
+        const meteorCnt = document.getElementById('in-val-mcount');
+        if (meteorTog) this.userData.meteorEnabled = meteorTog.checked;
+        if (meteorClr) this.userData.meteorColor = meteorClr.value;
+        if (meteorSpd) this.userData.meteorSpeed = parseFloat(meteorSpd.value);
+        if (meteorCnt) this.userData.meteorCount = parseInt(meteorCnt.value);
     }
 
     renderPhotoList() {

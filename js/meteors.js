@@ -2,12 +2,12 @@
 const SERVER_URL_PROD = window.SERVER_URL_PROD || "https://api.deargift.online";
 
 // Biến cho phép custom màu sao băng
-let selectedColor = "#00f0ff"; // Bạn có thể đổi màu này tuỳ ý
-let gradientColor1 = "#00f0ff";
-let gradientColor2 = "#ffffff";
+let selectedColor = window.meteorColor || "#edededff"; // Bạn có thể đổi màu này tuỳ ý
+let gradientColor1 = window.meteorColor || "#f9fbfbff";
+let gradientColor2 = window.meteorColor || "#ffffff";
 let isGradientMode = false;
-let currentMeteorSpeed = 4; // Giá trị mặc định, sẽ cập nhật theo dashboard
-let isMeteorShowerActive = false; // Biến kiểm soát trạng thái bật/tắt mưa sao băng
+let currentMeteorSpeed = window.meteorSpeed || 4; // Giá trị mặc định, sẽ cập nhật theo dashboard
+let isMeteorShowerActive = window.isMeteorShowerActive || false; // Biến kiểm soát trạng thái bật/tắt mưa sao băng
 let isMeteorFeatureEnabled = false; // Biến kiểm tra xem có config mưa sao băng trong URL không
 
 // Export biến để truy cập từ bên ngoài
@@ -210,13 +210,21 @@ function animate() {
   const canvas = document.getElementById("canvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+
+  // Ensure canvas size is correct (prevent "zoom" look at start)
+  if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  // Clear canvas for transparency when not active or for crisp frames
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Chỉ vẽ mưa sao băng khi được bật
   if (isMeteorShowerActive) {
-    ctx.fillStyle = "rgba(0, 0, 50, 0.05)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Note: If you want trails, you'd use a semi-transparent fill instead of clearRect
+    // but clearRect is safer for performance and transparency.
+    // For trails, we can draw a semi-transparent overlay in each Meteor's draw or use a different approach.
 
     meteors.forEach((meteor) => {
       meteor.update();
@@ -228,6 +236,13 @@ function animate() {
 }
 
 window.addEventListener("load", () => {
+  // Initialize canvas size immediately on load
+  const canvas = document.getElementById("canvas");
+  if (canvas) {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  
   animate();
 
   // Kiểm tra config mưa sao băng ngay lập tức cho desktop
@@ -328,6 +343,16 @@ window.setMeteorGradient = function (c1, c2) {
     m.color1 = c1;
     m.color2 = c2;
   });
+};
+
+window.setMeteorActive = function (active) {
+  isMeteorShowerActive = active;
+  window.isMeteorShowerActive = active;
+  if (active) {
+    meteors.forEach((meteor) => {
+      meteor.reset();
+    });
+  }
 };
 
 // Hàm toggle mưa sao băng

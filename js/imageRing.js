@@ -363,7 +363,7 @@ export class FlowerRingSystem {
 
           // 2) Setelah sprite ada, preload banyak gambar lalu randomize material
           const textureList = Array.from(
-            { length: 2 },
+            { length: 3 },
             (_, i) => `assets/images/photo${i + 1}.jpeg`,
           );
 
