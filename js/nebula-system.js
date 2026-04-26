@@ -133,8 +133,8 @@ export function createNebulaSystem(scene, options = {}) {
       positions.some((pos) => {
         const distance = Math.sqrt(
           Math.pow(position.x - pos.x, 2) +
-            Math.pow(position.y - pos.y, 2) +
-            Math.pow(position.z - pos.z, 2),
+          Math.pow(position.y - pos.y, 2) +
+          Math.pow(position.z - pos.z, 2),
         );
         return distance < minDistance;
       })

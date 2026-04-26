@@ -85,6 +85,29 @@ const PRESETS = {
     }
 };
 
+const DEFAULT_DATA = {
+    greetingText: "Hi ",
+    questionText: "Wanna see something cute?",
+    globeText: "Hi",
+    photos: [
+        "assets/images/loading-love.png"
+    ],
+    globeColor: '#a855f7',
+    particleColor: '#ec4899',
+    diskColor: '#a855f7',
+    innerDiskColor: '#f5d0fe',
+    outermostColor: '#ec4899',
+    backgroundColor: '#ec4899',
+    isGradient: true,
+    size: 9,
+    rotationSpeed: 0.002,
+    particleSpeed: 2.0,
+    centralHeartEnabled: false,
+    text3dEnabled: true,
+    nebulaEnabled: false,
+    textColor: 0xffffff
+};
+
 class Dashboard {
     constructor() {
         this.userId = this.getUserIdFromUrl();
@@ -136,31 +159,37 @@ class Dashboard {
     async fetchData(id) {
         try {
             const doc = await this.db.collection('user_configs').doc(id).get();
+
+            // Create a local copy of DEFAULT_DATA and set the ID
+            const baseData = { ...DEFAULT_DATA, id: id };
+
             if (doc.exists) {
-                return { data: doc.data(), exists: true };
-            } else {
+                const fetchedData = doc.data();
+
+                // Handle missing or empty photos by using defaults
+                if (!fetchedData.photos || fetchedData.photos.length === 0) {
+                    fetchedData.photos = baseData.photos;
+                }
+
+                // Merge fetched data over base data to ensure all fields exist
                 return {
-                    data: {
-                        id: id,
-                        greetingText: "Happy Anniversary Bubuyy 😘",
-                        questionText: "Do you want to see our memories?",
-                        globeText: "To My Beloved",
-                        photos: [],
-                        globeColor: '#a855f7', particleColor: '#ec4899', diskColor: '#a855f7',
-                        innerDiskColor: '#f5d0fe', outermostColor: '#ec4899', backgroundColor: '#ec4899', isGradient: true,
-                        size: 9,
-                        rotationSpeed: 0.002,
-                        particleSpeed: 2.0,
-                        centralHeartEnabled: false,
-                        text3dEnabled: true,
-                        nebulaEnabled: false
-                    },
+                    data: { ...baseData, ...fetchedData },
+                    exists: true
+                };
+            } else {
+                // If document doesn't exist, return default data
+                return {
+                    data: baseData,
                     exists: false
                 };
             }
         } catch (error) {
             console.error('Error fetching data from Firestore:', error);
-            return null;
+            // Fallback to default data even on error, so the app doesn't break
+            return {
+                data: { ...DEFAULT_DATA, id: id },
+                exists: false
+            };
         }
     }
 
@@ -206,9 +235,11 @@ class Dashboard {
         else document.addEventListener('sphere_ready', updateSphere);
 
         // Photos
-        if (this.userData.photos && this.userData.photos.length > 0) {
-            window.dispatchEvent(new CustomEvent('update_photos', { detail: this.userData.photos }));
-        }
+        const photosToUse = (this.userData.photos && this.userData.photos.length > 0)
+            ? this.userData.photos
+            : DEFAULT_DATA.photos;
+
+        window.dispatchEvent(new CustomEvent('update_photos', { detail: photosToUse }));
     }
 
     createDashboardButton() {
@@ -474,8 +505,8 @@ class Dashboard {
     async handlePhotoUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
-        if (this.userData.photos.length >= 12) {
-            alert("Maksimal 12 foto!");
+        if (this.userData.photos.length >= 5) {
+            alert("Maksimal 5 foto!");
             return;
         }
         const btn = document.getElementById('btn-add-photo');

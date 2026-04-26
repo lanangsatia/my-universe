@@ -74,7 +74,7 @@ class Meteor {
       if (Date.now() - this.lastStart > totalDelay) {
         this.active = true;
       } else {
-        return; // chưa đến thời điểm bay
+        return;
       }
     }
     this.x += Math.cos(this.angle) * this.speed;
@@ -105,31 +105,28 @@ class Meteor {
   }
 
   reset() {
-    // Phân bố sao băng theo vùng khác nhau trên màn hình khi reset
     const screenWidth = window.innerWidth;
     const regionWidth = screenWidth / NUM_GROUPS;
     const regionStart = this.groupIndex * regionWidth;
-    this.x = regionStart + Math.random() * regionWidth; // Sao băng chỉ xuất hiện trong vùng của tốp
+    this.x = regionStart + Math.random() * regionWidth;
 
     this.y = -50;
     this.length = Math.random() * 80 + 60;
     this.speed = currentMeteorSpeed;
 
-    // Điều chỉnh góc bay dựa trên kích thước màn hình (giống constructor)
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     const isPortrait = window.innerHeight > window.innerWidth;
 
     if (isMobile && isPortrait) {
-      this.angle = Math.PI / 5 + (Math.random() - 0.5) * 0.1; // 5-10 độ
+      this.angle = Math.PI / 5 + (Math.random() - 0.5) * 0.1;
     } else {
-      this.angle = Math.PI / 10 + (Math.random() - 0.5) * 0.2; // 10-20 độ
+      this.angle = Math.PI / 10 + (Math.random() - 0.5) * 0.2;
     }
 
     this.opacity = 1;
     this.particles = [];
     this.color1 = gradientColor1;
     this.color2 = gradientColor2;
-    // Giữ nguyên individualDelay và initialRandomDelay, chỉ reset thời gian bắt đầu
     this.lastStart = Date.now();
     this.active = false;
   }
@@ -303,7 +300,6 @@ window.addEventListener("resize", () => {
   }
 });
 
-// Hàm đổi màu sao băng, gọi hàm này khi muốn đổi màu
 window.setMeteorColor = function (color) {
   isGradientMode = false;
   gradientColor1 = color;

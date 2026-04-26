@@ -87,9 +87,9 @@ export class Heart {
         // Phát sự kiện heart3D sẵn sàng
         try {
           document.dispatchEvent(new CustomEvent("heart3d_ready"));
-        } catch (e) {}
+        } catch (e) { }
       },
-      (xhr) => {},
+      (xhr) => { },
       (error) => {
         console.error("Error loading model:", error);
         console.error("Error details:", error.message);

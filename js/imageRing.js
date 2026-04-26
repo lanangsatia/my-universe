@@ -339,25 +339,43 @@ export class FlowerRingSystem {
     const textureLoader = new THREE.TextureLoader();
     textureLoader.setCrossOrigin("anonymous");
 
-    textureLoader.load(
-      "assets/images/photo1.jpeg",
-      (texture) => {
-        this.processAndCreateFlowers(texture);
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
 
-        // 2) Setelah sprite ada, preload banyak gambar lalu randomize material
-        const textureList = Array.from(
-          { length: 5 },
-          (_, i) => `assets/images/photo${i + 1}.jpeg`,
-        );
+    if (id) {
+      textureLoader.load(
+        "assets/images/loading-love.png",
+        (texture) => {
+          this.processAndCreateFlowers(texture);
+          this.preloadTextures(["assets/images/loading-love.png"]);
+        },
+        undefined,
+        (error) => {
+          console.error("error load default texture:", error);
+          this.createFallbackTexture();
+        }
+      );
+    } else {
+      textureLoader.load(
+        "assets/images/photo1.jpeg",
+        (texture) => {
+          this.processAndCreateFlowers(texture);
 
-        this.preloadTextures(textureList);
-      },
-      undefined,
-      (error) => {
-        console.error("error load texture:", error);
-        this.createFallbackTexture();
-      },
-    );
+          // 2) Setelah sprite ada, preload banyak gambar lalu randomize material
+          const textureList = Array.from(
+            { length: 2 },
+            (_, i) => `assets/images/photo${i + 1}.jpeg`,
+          );
+
+          this.preloadTextures(textureList);
+        },
+        undefined,
+        (error) => {
+          console.error("error load static texture:", error);
+          this.createFallbackTexture();
+        }
+      );
+    }
   }
 
   createFallbackTexture() {

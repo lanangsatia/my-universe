@@ -127,7 +127,7 @@ export class ParticleSystem {
       const rand = Math.pow(Math.random(), 1.5);
       const radius = Math.sqrt(
         outerRadius * outerRadius * rand +
-          (1 - rand) * innerRadius * innerRadius,
+        (1 - rand) * innerRadius * innerRadius,
       );
       const angle = Math.random() * Math.PI * 2;
       const height = (Math.random() - 0.5) * 2;

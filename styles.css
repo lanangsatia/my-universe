@@ -22,7 +22,28 @@
 }
 
 .rotate-btn:hover {
-    background: rgba(255, 107, 107, 0);
+    background: rgba(255, 107, 107, 0.4);
+    transform: scale(1.05);
+}
+
+.mute-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 75px;
+    z-index: 10000;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 10px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    backdrop-filter: blur(10px);
+    transition: all 0.25s ease;
+}
+
+.mute-btn:hover {
+    background: rgba(255, 107, 107, 0.4);
     transform: scale(1.05);
 }
 

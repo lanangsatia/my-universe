@@ -20,20 +20,20 @@ export class AudioManager {
     this.optimizeForDevice();
 
     // === AUDIO LIST ===
-    this.audioList = [
-      "assets/musics/skyfullofstars.mp3",
-      "assets/musics/massageinabottle.mp3",
-      "assets/musics/oldlove.mp3",
-      "assets/musics/perfect.mp3",
-      "assets/musics/herewithme.mp3",
-      "assets/musics/givemeyourforever.mp3",
-      "assets/musics/wannabeyours.mp3",
-      "assets/musics/stuckwithyou.mp3",
-      "assets/musics/untilifoundyou.mp3",
-      "assets/musics/sombadypleasure.mp3",
-      "assets/musics/dandelions.mp3",
-      "assets/musics/gluesong.mp3",
-    ];
+    // this.audioList = [
+    //   "assets/musics/skyfullofstars.mp3",
+    //   "assets/musics/massageinabottle.mp3",
+    //   "assets/musics/oldlove.mp3",
+    //   "assets/musics/perfect.mp3",
+    //   "assets/musics/herewithme.mp3",
+    //   "assets/musics/givemeyourforever.mp3",
+    //   "assets/musics/wannabeyours.mp3",
+    //   "assets/musics/stuckwithyou.mp3",
+    //   "assets/musics/untilifoundyou.mp3",
+    //   "assets/musics/sombadypleasure.mp3",
+    //   "assets/musics/dandelions.mp3",
+    //   "assets/musics/gluesong.mp3",
+    // ];
 
     this.currentAudioIndex = 9; // Index của hukhong.mp3 (default)
 
@@ -41,7 +41,7 @@ export class AudioManager {
     this.setupAudioEvents();
 
     // === SMART PRELOADING ===
-    this.preloadNextAudios();
+    // this.preloadNextAudios();
   }
 
   // === DEVICE DETECTION & OPTIMIZATION ===
@@ -348,6 +348,18 @@ export class AudioManager {
     } catch (error) {
       console.error("🎵 Error playing audio:", error);
     }
+  }
+
+  /**
+   * Toggle mute/unmute audio
+   * @returns {boolean} Status isMuted (true if muted)
+   */
+  toggleMute() {
+    if (this.audio) {
+      this.audio.muted = !this.audio.muted;
+      return this.audio.muted;
+    }
+    return false;
   }
 
   // === PUBLIC METHODS ===

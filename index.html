@@ -360,6 +360,7 @@
             }
         }
         // Đợi widget Google Translate render xong mới chèn icon
+        // 
         document.addEventListener('DOMContentLoaded', function () {
             var interval = setInterval(function () {
                 var gadget = document.querySelector('.goog-te-gadget');
@@ -375,10 +376,8 @@
 
 <body>
 
-    <button id="rotateToggleBtn" class="rotate-btn">
-        ⏸ Stop
-
-    </button>
+    <button id="rotateToggleBtn" class="rotate-btn">⏸</button>
+    <button id="muteToggleBtn" class="mute-btn">🔊</button>
     <canvas id="canvas"
         style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10;pointer-events:none;"></canvas>
     <div class="stars-bg"></div>
@@ -828,11 +827,18 @@
         let rotationFactor = 1; // 1 = full speed, 0 = stop
 
         const rotateBtn = document.getElementById("rotateToggleBtn");
+        const muteBtn = document.getElementById("muteToggleBtn");
 
         rotateBtn.addEventListener("click", () => {
             isRotating = !isRotating;
+            rotateBtn.textContent = isRotating ? "⏸" : "▶";
+        });
 
-            rotateBtn.textContent = isRotating ? "⏸ Stop" : "▶ Play";
+        muteBtn.addEventListener("click", () => {
+            if (window.audioManager) {
+                const isMuted = window.audioManager.toggleMute();
+                muteBtn.textContent = isMuted ? "🔇" : "🔊";
+            }
         });
 
 
