@@ -93,3 +93,21 @@ canvas { display: block; }
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Monetization button */
+.create-globe-btn {
+  position: fixed; top: 20px; right: 20px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #a855f7, #ff6b6b);
+  color: #fff; border: none; border-radius: 30px;
+  cursor: pointer; z-index: 1001;
+  font-size: 14px; font-weight: 600;
+  text-decoration: none;
+  align-items: center; gap: 6px;
+  box-shadow: 0 4px 20px rgba(168,85,247,0.3);
+  transition: all 0.3s ease;
+}
+.create-globe-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 30px rgba(168,85,247,0.5);
+}

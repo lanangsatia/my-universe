@@ -22,7 +22,15 @@ export default function Home() {
     document.addEventListener('click', h); return () => document.removeEventListener('click', h);
   }, [showHelp]);
 
-  const handleYes = useCallback(() => { setShowQuestion(false); setAnimTrigger(n => n + 1); }, []);
+  const handleYes = useCallback(() => {
+    setShowQuestion(false);
+    setAnimTrigger(n => n + 1);
+    // Auto-play music on user gesture
+    if (audioRef.current) {
+      audioRef.current.play().catch(() => {});
+      setIsMuted(false);
+    }
+  }, []);
 
   if (isLoading) {
     return (
@@ -61,11 +69,20 @@ export default function Home() {
         </div>
       )}
 
-      <div ref={helpIconRef} className="help-icon" onClick={() => setShowHelp(v => !v)} style={{ display: showQuestion ? 'none' : 'flex' }}>
+      {/* <div ref={helpIconRef} className="help-icon" onClick={() => setShowHelp(v => !v)} style={{ display: showQuestion ? 'none' : 'flex' }}>
         <i className="fas fa-question-circle" style={{ color: '#fff', fontSize: '20px' }} />
-      </div>
+      </div> */}
 
-      {showHelp && (
+      {/* Monetization button */}
+      <a
+        href="/pricing"
+        className="create-globe-btn"
+        style={{ display: showQuestion ? 'none' : 'flex' }}
+      >
+        ✨ Buat Globe
+      </a>
+
+      {/* {showHelp && (
         <div ref={helpPanelRef} className="help-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
             <h3>Petunjuk Singkat</h3>
@@ -86,7 +103,7 @@ export default function Home() {
             </ul>
           </div>
         </div>
-      )}
+      )} */}
 
       <button className="rotate-btn" onClick={() => setIsRotating(v => !v)}>{isRotating ? '⏸' : '▶'}</button>
       <button className="mute-btn" onClick={() => {
@@ -95,7 +112,7 @@ export default function Home() {
         if (isMuted) { a.play().catch(() => {}); setIsMuted(false); }
         else { a.pause(); setIsMuted(true); }
       }}>{isMuted ? '🔇' : '🔊'}</button>
-      <audio ref={audioRef} src="/assets/musics/skyfullofstars.mp3" loop preload="none" style={{ display: 'none' }} />
+      <audio ref={audioRef} src="/assets/musics/skyfullofstars.mp3" loop preload="auto" style={{ display: 'none' }} />
     </main>
   );
 }

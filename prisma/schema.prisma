@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(uuid()) @db.Uuid
+  email      String   @unique
+  name       String
+  slug       String   @unique
+  package    String   @default("free")
+  maxPhotos  Int      @default(5) @map("max_photos")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  payments Payment[]
+  photos   Photo[]
+
+  @@map("users")
+}
+
+model Payment {
+  id        String    @id @default(uuid()) @db.Uuid
+  orderId   String    @unique @map("order_id")
+  userId    String?   @map("user_id") @db.Uuid
+  package   String
+  amount    Int
+  status    String    @default("PENDING")
+  paidAt    DateTime? @map("paid_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+model Photo {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  imageUrl    String   @map("image_url") @db.Text
+  title       String?
+  description String?
+  positionX   Float?   @map("position_x")
+  positionY   Float?   @map("position_y")
+  positionZ   Float?   @map("position_z")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("photos")
+}
