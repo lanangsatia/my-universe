@@ -1,5 +1,6 @@
-import {ClerkProvider, SignInButton, SignUpButton, Show, UserButton} from "@clerk/nextjs";
+import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
+import AuthBar from "../components/ui/AuthBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,20 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ClerkProvider afterSignOutUrl="/">
-          {/* Global Auth Bar */}
-          <div className="auth-bar">
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <button className="auth-btn auth-btn-signin">Masuk</button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="auth-btn auth-btn-signup">Daftar</button>
-              </SignUpButton>
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
-          </div>
+          <AuthBar />
           {children}
         </ClerkProvider>
       </body>

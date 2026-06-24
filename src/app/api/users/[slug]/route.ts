@@ -13,6 +13,7 @@ export async function GET(
       select: {
         name: true,
         slug: true,
+        config: true,
         photos: {
           select: { imageUrl: true },
           orderBy: { createdAt: 'asc' },
@@ -24,7 +25,20 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    // Convert R2 public URLs to proxy URLs
+    const r2PublicBase = process.env.R2_PUBLIC_URL || '';
+    const photos = user.photos.map(p => ({
+      imageUrl: p.imageUrl.startsWith(r2PublicBase)
+        ? `/api/r2/${p.imageUrl.replace(r2PublicBase + '/', '')}`
+        : p.imageUrl,
+    }));
+
+    return NextResponse.json({
+      name: user.name,
+      slug: user.slug,
+      config: user.config || {},
+      photos,
+    });
   } catch (error) {
     console.error('User fetch error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

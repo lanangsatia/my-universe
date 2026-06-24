@@ -75,7 +75,7 @@ export default function Home() {
 
       {/* Monetization button */}
       <a
-        href="/pricing"
+        href="/dashboard"
         className="create-globe-btn"
         style={{ display: showQuestion ? 'none' : 'flex' }}
       >

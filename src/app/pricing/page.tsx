@@ -43,19 +43,16 @@ export default function PricingPage() {
   const handleChoose = async (plan: typeof PLANS[0]) => {
     setLoading(plan.id);
     try {
-      const res = await fetch('/api/payment/create', {
+      const res = await fetch('/api/payment/bypass', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ package: plan.id, amount: plan.price }),
+        body: JSON.stringify({ package: plan.id }),
       });
       const data = await res.json();
-      if (data.invoice_url) {
-        window.location.href = data.invoice_url;
-      } else if (data.qr_image) {
-        // Show QR modal
-        router.push(`/payment/${data.order_id}`);
+      if (res.ok) {
+        router.push('/dashboard');
       } else {
-        alert('Gagal membuat pembayaran. Silakan coba lagi.');
+        alert(data.error || 'Gagal memproses. Silakan login dulu.');
       }
     } catch {
       alert('Terjadi kesalahan. Silakan coba lagi.');

@@ -13,15 +13,38 @@ interface Scene3DProps {
   autoRotate?: boolean;
   startAnimation?: number;
   onSceneReady?: (refs: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => void;
+  config?: {
+    globeColor?: string;
+    particleColor?: string;
+    diskColor?: string;
+    innerDiskColor?: string;
+    outermostColor?: string;
+    isGradient?: boolean;
+    size?: number;
+    rotationSpeed?: number;
+    particleSpeed?: number;
+    meteorEnabled?: boolean;
+    meteorColor?: string;
+    meteorSpeed?: number;
+    centralHeartEnabled?: boolean;
+    text3dEnabled?: boolean;
+    nebulaEnabled?: boolean;
+  };
 }
 
-export default function Scene3D({ photos = [], autoRotate = true, startAnimation = 0, onSceneReady }: Scene3DProps) {
+export default function Scene3D({ photos = [], autoRotate = true, startAnimation = 0, onSceneReady, config = {} }: Scene3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const autoRotateRef = useRef(autoRotate);
   const rotationFactorRef = useRef(1);
   const animatingRef = useRef(false);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const flowerGroupRef = useRef<THREE.Group | null>(null);
+  const fSpritesRef = useRef<THREE.Sprite[]>([]);
+  const fLoadedRef = useRef(false);
+  const configRef = useRef(config);
+  configRef.current = config;
   useEffect(() => { autoRotateRef.current = autoRotate; }, [autoRotate]);
 
   useEffect(() => {
@@ -105,9 +128,10 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       const mesh = new THREE.Points(g, m); scene.add(mesh); return mesh;
     }
     const pink = new THREE.Color(1.0, 0.8, 0.9);
-    const innerDisk = mkDisk(6000, 0, 110, 4, 0.7, THREE.NormalBlending, () => new THREE.Color(1.0, 0.8, 0.9));
+    const innerDisk = mkDisk(6000, 0, 110, 4, 0.7, THREE.NormalBlending, () => new THREE.Color(configRef.current.innerDiskColor || '#f5d0fe'));
 
-    // Main disk (100000, r 110-350, size 0.3, AdditiveBlending) - uses pow(1.5) formula
+    // Main disk (100000, r 110-350, size 0.3, AdditiveBlending)
+    const mDiskColor = new THREE.Color(configRef.current.diskColor || '#a855f7');
     const mCount = 100000; const mGeo = new THREE.BufferGeometry();
     const mPos = new Float32Array(mCount * 3); const mCol = new Float32Array(mCount * 3);
     for (let i = 0; i < mCount; i++) {
@@ -115,7 +139,7 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       const r = Math.sqrt(350 * 350 * rand + (1 - rand) * 110 * 110);
       const a = Math.random() * Math.PI * 2; const h = (Math.random() - 0.5) * 2;
       mPos[i * 3] = Math.cos(a) * r; mPos[i * 3 + 1] = h; mPos[i * 3 + 2] = Math.sin(a) * r;
-      mCol[i * 3] = 1.0; mCol[i * 3 + 1] = 0.8; mCol[i * 3 + 2] = 0.9;
+      mCol[i * 3] = mDiskColor.r; mCol[i * 3 + 1] = mDiskColor.g; mCol[i * 3 + 2] = mDiskColor.b;
     }
     mGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
     mGeo.setAttribute('color', new THREE.BufferAttribute(mCol, 3));
@@ -123,13 +147,15 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
     scene.add(mDisk);
 
     // Outermost disk (100000, r 350-520, size 0.5, ShaderMaterial, AdditiveBlending)
+    const oColor = new THREE.Color(configRef.current.outermostColor || '#ec4899');
     const oCount = 100000; const oGeo = new THREE.BufferGeometry();
     const oPos = new Float32Array(oCount * 3); const oCol = new Float32Array(oCount * 3);
     for (let i = 0; i < oCount; i++) {
       const r = 350 + Math.random() * 170; const a = Math.random() * Math.PI * 2; const h = (Math.random() - 0.5) * 4;
       oPos[i * 3] = Math.cos(a) * r; oPos[i * 3 + 1] = h; oPos[i * 3 + 2] = Math.sin(a) * r;
-      const c = new THREE.Color(Math.random() * 0.2 + 0.8, Math.random() * 0.2 + 0.8, Math.random() * 0.2 + 0.8);
-      oCol[i * 3] = c.r; oCol[i * 3 + 1] = c.g; oCol[i * 3 + 2] = c.b;
+      oCol[i * 3] = oColor.r + (Math.random() - 0.5) * 0.2;
+      oCol[i * 3 + 1] = oColor.g + (Math.random() - 0.5) * 0.2;
+      oCol[i * 3 + 2] = oColor.b + (Math.random() - 0.5) * 0.2;
     }
     oGeo.setAttribute('position', new THREE.BufferAttribute(oPos, 3));
     oGeo.setAttribute('color', new THREE.BufferAttribute(oCol, 3));
@@ -143,7 +169,16 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
 
     // ===== CENTRAL SPHERE (sphere.js - GPU shader via onBeforeCompile) =====
     const SPHERE = 15000;
-    const sConfig = { color1: '#a855f7', color2: '#ec4899', size: 9, particleSpeed: 2.0, rotationSpeed: 0.002, points: SPHERE, radius: { MIN: 55, MAX: 60 }, isGradient: true };
+    const sConfig = {
+      color1: configRef.current.globeColor || '#a855f7',
+      color2: configRef.current.particleColor || '#ec4899',
+      size: configRef.current.size || 9,
+      particleSpeed: configRef.current.particleSpeed || 2.0,
+      rotationSpeed: configRef.current.rotationSpeed || 0.002,
+      points: SPHERE,
+      radius: { MIN: 55, MAX: 60 },
+      isGradient: configRef.current.isGradient ?? true,
+    };
     const sPts: THREE.Vector3[] = []; const sSizes: number[] = []; const sShifts: number[] = [];
     for (let i = 0; i < SPHERE; i++) {
       sSizes.push(Math.random() * 1.5 + 0.5);
@@ -171,6 +206,7 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
     scene.add(sphereMesh);
 
     // ===== NEBULA (nebula-system.js) — deferred =====
+    if (configRef.current.nebulaEnabled !== false) {
     requestAnimationFrame(() => {
     const nebCols = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff','#5f27cd','#00d2d3','#ff9f43'];
     for (let i = 0; i < 25; i++) {
@@ -186,33 +222,29 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       scene.add(sp);
     }
     });
+    }
 
     // ===== FLOWER RING (imageRing.js) — OPTIMIZED =====
     const flowerGroup = new THREE.Group(); scene.add(flowerGroup);
     const fSprites: THREE.Sprite[] = []; let fLoaded = false;
+    sceneRef.current = scene;
+    flowerGroupRef.current = flowerGroup;
+    fSpritesRef.current = fSprites;
+    fLoadedRef.current = false;
     function loadFlowers(urls: string[]) {
       fSprites.forEach(s => { flowerGroup.remove(s); s.material.dispose(); }); fSprites.length = 0; fLoaded = false;
       if (urls.length === 0) return;
-      const imgs: HTMLImageElement[] = []; let ld = 0;
+      const loader = new THREE.TextureLoader();
+      const matCache: THREE.SpriteMaterial[] = [];
+      let ld = 0;
       urls.forEach((src, i) => {
-        const img = new Image(); img.crossOrigin = 'anonymous';
-        img.onload = () => { imgs[i] = img; ld++; if (ld === urls.length) {
-          // Pre-process each unique photo: resize to canvas texture
-          const matCache: THREE.SpriteMaterial[] = [];
-          for (let k = 0; k < urls.length; k++) {
-            const img3 = imgs[k];
-            const iw = img3.naturalWidth || img3.width; const ih2 = img3.naturalHeight || img3.height;
-            const cv2 = document.createElement('canvas'); cv2.width = iw; cv2.height = ih2;
-            const cx2 = cv2.getContext('2d')!;
-            cx2.drawImage(img3, 0, 0);
-            const tex = new THREE.CanvasTexture(cv2);
-            tex.colorSpace = THREE.SRGBColorSpace;
-            tex.minFilter = THREE.NearestFilter; tex.magFilter = THREE.NearestFilter;
-            tex.needsUpdate = true;
-            matCache[k] = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false, sizeAttenuation: true, toneMapped: false, alphaTest: 0.01 });
-          }
-          // Create 500 sprites sharing the pre-processed materials — deferred for smooth init
-          requestAnimationFrame(() => {
+        loader.load(src, (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.minFilter = THREE.LinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          matCache[i] = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false, sizeAttenuation: true });
+          ld++;
+          if (ld === urls.length) {
             for (let j = 0; j < 500; j++) {
               const mat = matCache[j % urls.length];
               const spr = new THREE.Sprite(mat);
@@ -220,16 +252,14 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
               const radius = 130 + Math.random() * 400;
               const pY = (Math.random() - 0.5) * 16;
               spr.position.set(Math.cos(angle) * radius, pY, Math.sin(angle) * radius);
-              const sprSz = 10 + Math.random() * 3;
-              spr.scale.set(sprSz, sprSz, 1);
+              spr.scale.set(12, 12, 1);
               spr.lookAt(0, pY, 0);
               flowerGroup.add(spr); fSprites.push(spr);
             }
             fLoaded = true;
-          });
-        }};
-        img.onerror = () => { ld++; if (ld === urls.length) fLoaded = true; };
-        img.src = src;
+            fLoadedRef.current = true;
+          }
+        });
       });
     }
     if (photos.length > 0) loadFlowers(photos);
@@ -242,7 +272,8 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
         new GLTFLoader().load('/assets/images/heart_in_love.glb', (gltf) => {
           heartGroup = new THREE.Group();
           const m = gltf.scene; m.scale.set(1.2, 1.2, 1.2);
-          heartGroup.add(m); heartGroup.position.set(0, 115, 0); heartGroup.visible = false;
+          heartGroup.add(m); heartGroup.position.set(0, 115, 0);
+          heartGroup.visible = configRef.current.centralHeartEnabled === true;
           scene.add(heartGroup);
           const hl = new THREE.PointLight(0xffffff, 2, 1000); hl.position.set(0, 200, 100); scene.add(hl);
           const hd = new THREE.DirectionalLight(0xffffff, 1); hd.position.set(0, 200, -100); scene.add(hd);
@@ -250,25 +281,33 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       } catch (_) { /* silent */ }
     })();
 
-    // ===== METEOR SHOWER (meteors.js) =====
-    const mCanvas = document.createElement('canvas');
+    // ===== METEOR SHOWER (meteors.js) — configurable =====
+    let mCanvas: HTMLCanvasElement | null = null;
+    let mCtx: CanvasRenderingContext2D | null = null;
+    let meteors: any[] = [];
+    let updateMeteors = () => {};
+    const meteorEnabled = configRef.current.meteorEnabled === true;
+    if (meteorEnabled) {
+    mCanvas = document.createElement('canvas');
     mCanvas.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:2;';
     mCanvas.width = window.innerWidth; mCanvas.height = window.innerHeight;
     container.appendChild(mCanvas);
-    const mCtx = mCanvas.getContext('2d')!;
+    mCtx = mCanvas.getContext('2d')!;
     const G = 15; const GI = 200; const gd: number[] = []; for (let g = 0; g < G; g++) gd[g] = g * GI;
-    const meteors = Array.from({ length: 200 }, (_, i) => {
+    const meteorSpeed2 = configRef.current.meteorSpeed || 4;
+    const meteorCol = configRef.current.meteorColor || '#ffffff';
+    meteors = Array.from({ length: 200 }, (_, i) => {
       const gi = i % G; const sw = window.innerWidth; const rw = sw / G;
       return { gi, gd: gd[gi], id: Math.random() * 8000, ls: Date.now(), active: false,
         x: gi * rw + Math.random() * rw, y: -50, length: Math.random() * 80 + 60,
-        speed: 2 + Math.random() * 3, angle: Math.PI / 12 + (Math.random() - 0.5) * 0.2,
-        opacity: 0.1, color: '#ffffff', particles: [] as any[] };
+        speed: 0.5 + Math.random() * 1.5 + meteorSpeed2 * 0.1, angle: Math.PI / 12 + (Math.random() - 0.5) * 0.2,
+        opacity: 0.1, color: meteorCol, particles: [] as any[] };
     });
-
-    function updateMeteors() {
-      const sw = window.innerWidth; const sh = window.innerHeight;
-      if (mCanvas.width !== sw || mCanvas.height !== sh) { mCanvas.width = sw; mCanvas.height = sh; }
-      mCtx.clearRect(0, 0, sw, sh);
+    updateMeteors = () => {
+      if (!mCanvas || !mCtx) return;
+      const sw2 = window.innerWidth; const sh2 = window.innerHeight;
+      if (mCanvas.width !== sw2 || mCanvas.height !== sh2) { mCanvas.width = sw2; mCanvas.height = sh2; }
+      mCtx.clearRect(0, 0, sw2, sh2);
       meteors.forEach(m => {
         const now = Date.now();
         if (!m.active) { if (now - m.ls > m.gd + m.id) m.active = true; else return; }
@@ -277,16 +316,17 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
         m.particles.forEach((p: any) => { p.x += p.vx; p.y += p.vy; p.opacity -= 0.02; });
         m.particles = m.particles.filter((p: any) => p.opacity > 0);
         const tx = m.x - Math.cos(m.angle) * m.length; const ty = m.y - Math.sin(m.angle) * m.length;
-        const grd = mCtx.createLinearGradient(m.x, m.y, tx, ty);
-        grd.addColorStop(0, `rgba(255,255,255,${m.opacity})`); grd.addColorStop(1, 'rgba(255,255,255,0)');
-        mCtx.strokeStyle = grd; mCtx.lineWidth = 2; mCtx.beginPath(); mCtx.moveTo(m.x, m.y); mCtx.lineTo(tx, ty); mCtx.stroke();
-        mCtx.beginPath(); mCtx.arc(m.x, m.y, 5, 0, Math.PI * 2);
-        const hg = mCtx.createRadialGradient(m.x, m.y, 0, m.x, m.y, 8);
-        hg.addColorStop(0, 'rgba(255,255,255,1)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
-        mCtx.fillStyle = hg; mCtx.fill();
-        m.particles.forEach((p: any) => { mCtx.beginPath(); mCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); mCtx.fillStyle = `rgba(255,255,255,${p.opacity})`; mCtx.fill(); });
-        if (m.y > sh || m.opacity <= 0) { const rw = sw / G; m.x = m.gi * rw + Math.random() * rw; m.y = -50; m.length = Math.random() * 80 + 60; m.speed = 2 + Math.random() * 3; m.angle = Math.PI / 12 + (Math.random() - 0.5) * 0.2; m.opacity = 1; m.particles = []; m.ls = now; m.active = false; }
+        const grd = mCtx!.createLinearGradient(m.x, m.y, tx, ty);
+        grd.addColorStop(0, `${m.color}`); grd.addColorStop(1, 'rgba(255,255,255,0)');
+        mCtx!.strokeStyle = grd; mCtx!.lineWidth = 2; mCtx!.beginPath(); mCtx!.moveTo(m.x, m.y); mCtx!.lineTo(tx, ty); mCtx!.stroke();
+        mCtx!.beginPath(); mCtx!.arc(m.x, m.y, 5, 0, Math.PI * 2);
+        const hg = mCtx!.createRadialGradient(m.x, m.y, 0, m.x, m.y, 8);
+        hg.addColorStop(0, `${m.color}`); hg.addColorStop(1, 'rgba(255,255,255,0)');
+        mCtx!.fillStyle = hg; mCtx!.fill();
+        m.particles.forEach((p: any) => { mCtx!.beginPath(); mCtx!.arc(p.x, p.y, p.size, 0, Math.PI * 2); mCtx!.fillStyle = `rgba(255,255,255,${p.opacity})`; mCtx!.fill(); });
+        if (m.y > sh2 || m.opacity <= 0) { const rw2 = sw2 / G; m.x = m.gi * rw2 + Math.random() * rw2; m.y = -50; m.length = Math.random() * 80 + 60; m.speed = 0.5 + Math.random() * 1.5 + meteorSpeed2 * 0.1; m.angle = Math.PI / 12 + (Math.random() - 0.5) * 0.2; m.opacity = 1; m.particles = []; m.ls = now; m.active = false; }
       });
+    };
     }
 
     // ===== ANIMATION LOOP =====
@@ -308,15 +348,19 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       }
       sphereMesh.rotation.y = t * sConfig.rotationSpeed;
 
-      // Rotate disks (always)
+      // Rotate disks (sync with config speed)
+      const cRot = configRef.current.rotationSpeed || 0.002;
+      const diskBase = cRot * 0.5;
       bgPts.rotation.y += 0.0001;
-      innerDisk.rotation.y += diskSpeed;
-      mDisk.rotation.y += diskSpeed;
+      innerDisk.rotation.y += diskBase;
+      mDisk.rotation.y += diskBase;
       oMat.uniforms.time.value = pClock.getElapsedTime();
-      oDisk.rotation.y += diskSpeed;
+      oDisk.rotation.y += diskBase;
 
       // Rotate photo group (smooth stop on pause)
-      if (fLoaded) flowerGroup.rotation.y += 0.0002 * rf;
+      if (fLoadedRef.current && flowerGroupRef.current) {
+        flowerGroupRef.current.rotation.y += 0.0002 * rf;
+      }
 
       controls.update();
       controls.autoRotateSpeed = 1 * rf;
@@ -328,7 +372,7 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       renderer.render(scene, camera);
 
       // Meteor shower
-      updateMeteors();
+      if (meteorEnabled) updateMeteors();
     };
     loop();
 
@@ -339,7 +383,7 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       const w2 = window.innerWidth; const h2 = window.innerHeight;
       camera.aspect = w2 / h2; camera.updateProjectionMatrix();
       renderer.setSize(w2, h2); composer.setSize(w2, h2);
-      mCanvas.width = w2; mCanvas.height = h2;
+      if (mCanvas) { mCanvas.width = w2; mCanvas.height = h2; }
     };
     window.addEventListener('resize', onResize);
 
@@ -347,9 +391,10 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', onResize);
       controls.dispose(); renderer.dispose(); composer.dispose();
+      if (mCanvas && mCanvas.parentNode) mCanvas.parentNode.removeChild(mCanvas);
       if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
     };
-  }, []);
+  }, [photos.join(','), configRef.current.globeColor, configRef.current.particleSpeed, configRef.current.rotationSpeed]);
 
   // Camera animation trigger (component-level useEffect)
   useEffect(() => {
