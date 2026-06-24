@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Scene3D from '@/components/three/Scene3D';
 
-const SAMPLE_PHOTOS = Array.from({ length: 10 }, (_, i) => `/assets/images/photo${i + 1}.jpeg`);
+const SAMPLE_PHOTOS = Array.from({ length: 5 }, (_, i) => `/assets/images/${i + 1}.jpeg`);
 const DEFAULT_GREETING = 'Hi, welcome to my universe!';
 const DEFAULT_QUESTION = 'Do you want to see our moments?';
 
