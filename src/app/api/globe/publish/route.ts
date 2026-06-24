@@ -51,14 +51,12 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      // Existing user — replace old photos, keep slug if already set
+      // Existing user — append photos, keep slug if already set
       slug = dbUser.slug || slug;
       if (slug !== dbUser.slug) {
         const existingUser = await prisma.user.findUnique({ where: { slug } });
         if (existingUser) return NextResponse.json({ error: 'Slug sudah dipakai' }, { status: 409 });
       }
-      // Delete old photos from DB (R2 files stay — no delete needed)
-      await prisma.photo.deleteMany({ where: { userId: dbUser.id } });
       // Update user
       await prisma.user.update({
         where: { id: dbUser.id },
@@ -67,7 +65,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Upload new photos
-    const photoUrls: string[] = [];
+    interface PhotoResult { id: string; imageUrl: string; }
+    const photoResults: PhotoResult[] = [];
     for (let i = 0; i < photos.length; i++) {
       const photo = photos[i];
       const buffer = Buffer.from(await photo.arrayBuffer());
@@ -85,11 +84,11 @@ export async function POST(req: NextRequest) {
       } else {
         url = `/api/r2/${key}`;
       }
-      photoUrls.push(url);
-      await prisma.photo.create({ data: { userId: dbUser.id, imageUrl: url, title: photo.name } });
+      const record = await prisma.photo.create({ data: { userId: dbUser.id, imageUrl: url, title: photo.name } });
+      photoResults.push({ id: record.id, imageUrl: url });
     }
 
-    return NextResponse.json({ success: true, slug, url: `/u/${slug}`, photos: photoUrls });
+    return NextResponse.json({ success: true, slug, url: `/u/${slug}`, photos: photoResults });
   } catch (error) {
     console.error('Publish error:', error);
     return NextResponse.json({ error: 'Gagal menerbitkan globe' }, { status: 500 });

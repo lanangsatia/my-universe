@@ -93,6 +93,8 @@ export default function DashboardPage() {
     const files = Array.from(e.target.files || []);
     if (files.length > remaining) { alert(`Maksimal ${MAX_PHOTOS} foto. Kamu hanya bisa tambah ${remaining} foto lagi.`); return; }
     setNewPhotos(prev => [...prev, ...files.map(f => ({ id: Math.random().toString(36).substring(2), url: URL.createObjectURL(f), file: f }))]);
+    // Reset input agar bisa pilih file yang sama lagi
+    e.target.value = '';
   };
 
   const removeNewPhoto = (id: string) => setNewPhotos(prev => prev.filter(p => p.id !== id));
@@ -117,6 +119,11 @@ export default function DashboardPage() {
       const data = await res.json();
       if (!res.ok) { alert(data.error || 'Gagal'); setPublishing(false); return; }
       setPublishedUrl(`${window.location.origin}${data.url}`);
+      // Tambah foto baru ke existingImages agar langsung muncul tanpa reload
+      if (data.photos?.length) {
+        const newExisting = data.photos.map((p: any) => ({ id: p.id, url: p.imageUrl }));
+        setExistingImages(prev => [...prev, ...newExisting]);
+      }
       setNewPhotos([]);
     } catch { alert('Terjadi kesalahan.'); }
     setPublishing(false);
