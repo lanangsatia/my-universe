@@ -15,7 +15,7 @@ export async function GET(
         slug: true,
         config: true,
         photos: {
-          select: { imageUrl: true },
+          select: { id: true, imageUrl: true },
           orderBy: { createdAt: 'asc' },
         },
       },
@@ -28,6 +28,7 @@ export async function GET(
     // Convert R2 public URLs to proxy URLs
     const r2PublicBase = process.env.R2_PUBLIC_URL || '';
     const photos = user.photos.map(p => ({
+      id: p.id,
       imageUrl: p.imageUrl.startsWith(r2PublicBase)
         ? `/api/r2/${p.imageUrl.replace(r2PublicBase + '/', '')}`
         : p.imageUrl,

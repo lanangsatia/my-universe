@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { UserButton } from '@clerk/nextjs';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { UserButton, useUser } from '@clerk/nextjs';
+import QRCode from 'qrcode';
 
 const MAX_PHOTOS = 10;
 
@@ -46,9 +47,11 @@ export default function DashboardPage() {
   const [newPhotos, setNewPhotos] = useState<PhotoItem[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState('');
-  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<{ id: string; url: string }[]>([]);
   const [config, setConfig] = useState<GlobeConfig>(DEFAULT_CONFIG);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -59,11 +62,30 @@ export default function DashboardPage() {
       if (sub.slug) {
         setSlug(sub.slug);
         fetch(`/api/users/${sub.slug}`).then(r => r.json()).then(u => {
-          if (u.photos) { setTitle(u.name || ''); setPublishedUrl(`${window.location.origin}/u/${sub.slug}`); setExistingImages(u.photos.map((p: any) => p.imageUrl)); }
+          if (u.photos) { setTitle(u.name || ''); setPublishedUrl(`${window.location.origin}/u/${sub.slug}`); setExistingImages(u.photos.map((p: any) => ({ id: p.id, url: p.imageUrl }))); }
         }).catch(() => {});
       }
       if (cfg && cfg.globeColor) setConfig(prev => ({ ...prev, ...cfg }));
     }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  // Generate QR code when published URL changes
+  useEffect(() => {
+    if (!publishedUrl) { setQrCodeDataUrl(null); return; }
+    QRCode.toDataURL(publishedUrl, { width: 160, margin: 1, color: { dark: '#ffffff', light: '#00000000' } })
+      .then(setQrCodeDataUrl)
+      .catch(() => {});
+  }, [publishedUrl]);
+
+  const handleDeleteImage = useCallback(async (photoId: string) => {
+    if (!confirm('Hapus foto ini?')) return;
+    setDeletingId(photoId);
+    try {
+      const res = await fetch(`/api/globe/photo/${photoId}`, { method: 'DELETE' });
+      if (!res.ok) { alert('Gagal menghapus foto'); setDeletingId(null); return; }
+      setExistingImages(prev => prev.filter(p => p.id !== photoId));
+    } catch { alert('Terjadi kesalahan'); }
+    setDeletingId(null);
   }, []);
 
   const totalCount = existingImages.length + newPhotos.length;
@@ -115,10 +137,15 @@ export default function DashboardPage() {
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Globe Saya</h1>
 
         {publishedUrl && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, marginBottom: 24, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
-            <span style={{ fontSize: 24 }}>🌍</span>
-            <div style={{ flex: 1 }}><p style={{ fontSize: 14, fontWeight: 600, color: '#22c55e' }}>✅ Globe sudah diterbitkan</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', borderRadius: 12, marginBottom: 24, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
+            {qrCodeDataUrl && <img src={qrCodeDataUrl} alt="QR Code" style={{ width: 80, height: 80, borderRadius: 8, flexShrink: 0 }} />}
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#22c55e' }}>✅ Globe sudah diterbitkan</p>
               <a href={publishedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontSize: 14, textDecoration: 'underline', wordBreak: 'break-all' }}>{publishedUrl}</a>
+              <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+                <button onClick={() => { navigator.clipboard.writeText(publishedUrl); }} style={{ padding: '4px 10px', fontSize: 12, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', cursor: 'pointer' }}>📋 Salin Link</button>
+                {qrCodeDataUrl && <button onClick={() => { const a = document.createElement('a'); a.href = qrCodeDataUrl; a.download = 'qrcode.png'; a.click(); }} style={{ padding: '4px 10px', fontSize: 12, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', cursor: 'pointer' }}>⬇️ Download QR</button>}
+              </div>
             </div>
           </div>
         )}
@@ -132,7 +159,12 @@ export default function DashboardPage() {
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleUpload} style={{ display: 'none' }} />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {existingImages.map((img, i) => <div key={`e${i}`} style={{ width: 80, height: 80, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}><img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>)}
+            {existingImages.map((img) => (
+              <div key={img.id} style={{ position: 'relative', width: 80, height: 80, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <img src={img.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <button onClick={() => handleDeleteImage(img.id)} disabled={deletingId === img.id} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, background: deletingId === img.id ? 'rgba(255,0,0,0.4)' : 'rgba(255,0,0,0.7)', border: 'none', borderRadius: '50%', color: '#fff', cursor: 'pointer', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{deletingId === img.id ? '⏳' : '✕'}</button>
+              </div>
+            ))}
             {newPhotos.map(p => (
               <div key={p.id} style={{ position: 'relative', width: 80, height: 80, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <img src={p.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
