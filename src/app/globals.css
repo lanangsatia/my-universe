@@ -140,3 +140,27 @@ canvas { display: block; }
 .auth-btn-signup:hover {
   opacity: 0.9;
 }
+.auth-btn-create {
+  padding: 8px 22px;
+  border: none; border-radius: 20px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #a855f7, #ff6b6b, #fbbf24);
+  background-size: 200% 200%;
+  color: #fff;
+  animation: gradientShift 3s ease infinite, pulseGlow 2s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(168,85,247,0.4);
+}
+.auth-btn-create:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 30px rgba(168,85,247,0.7);
+}
+@keyframes gradientShift {
+  0%,100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 15px rgba(168,85,247,0.3); }
+  50% { box-shadow: 0 0 30px rgba(168,85,247,0.7); }
+}

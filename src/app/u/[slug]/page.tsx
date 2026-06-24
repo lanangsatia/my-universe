@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
@@ -37,6 +37,9 @@ export default function UserGlobePage() {
   const [error, setError] = useState(false);
   const [showGreeting, setShowGreeting] = useState(true);
   const [animTrigger, setAnimTrigger] = useState(0);
+  const [isRotating, setIsRotating] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     fetch(`/api/users/${slug}`)
@@ -73,14 +76,14 @@ export default function UserGlobePage() {
 
   return (
     <main style={{ width: '100%', height: '100vh', overflow: 'hidden', background: '#000', position: 'relative' }}>
-      <Scene3D key={slug} photos={user.photos.map(p => p.imageUrl)} autoRotate={true} config={cfg} startAnimation={animTrigger} />
+      <Scene3D key={slug} photos={user.photos.map(p => p.imageUrl)} autoRotate={isRotating} config={cfg} startAnimation={animTrigger} />
 
       {/* Greeting overlay */}
       {showGreeting && (
         <div style={{
           position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'rgba(0,0,0,0.7)', zIndex: 100, cursor: 'pointer',
-        }} onClick={() => { setShowGreeting(false); setAnimTrigger(n => n + 1); }}>
+        }} onClick={() => { setShowGreeting(false); setAnimTrigger(n => n + 1); if (audioRef.current) { audioRef.current.play().catch(() => {}); setIsMuted(false); } }}>
           <div style={{ textAlign: 'center', padding: 20 }}>
             <h2 style={{ color: '#fff', fontSize: 'clamp(20px,5vw,36px)', fontWeight: 700, marginBottom: 12 }}>
               {cfg.greetingText || `Hi`} 😘
@@ -100,6 +103,15 @@ export default function UserGlobePage() {
       }}>
         ✨ {user.name || user.slug}&apos;s Universe · Powered by My Universe
       </div>
+      <button
+        onClick={() => setIsRotating(v => !v)}
+        style={{ position: 'fixed', bottom: 20, right: 24, zIndex: 100, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 20, padding: '8px 14px', color: '#fff', cursor: 'pointer', fontSize: 14 }}
+      >{isRotating ? '⏸' : '▶'}</button>
+      <button
+        onClick={() => { const a = audioRef.current; if (!a) return; if (isMuted) { a.play().catch(() => {}); setIsMuted(false); } else { a.pause(); setIsMuted(true); } }}
+        style={{ position: 'fixed', bottom: 20, right: 80, zIndex: 100, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 20, padding: '8px 14px', color: '#fff', cursor: 'pointer', fontSize: 14 }}
+      >{isMuted ? '🔇' : '🔊'}</button>
+      <audio ref={audioRef} src="/assets/musics/skyfullofstars.mp3" loop preload="auto" style={{ display: 'none' }} />
     </main>
   );
 }

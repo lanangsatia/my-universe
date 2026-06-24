@@ -43,8 +43,10 @@ export default function AuthBar() {
           <UserButton />
           {pathname === '/dashboard' && slug ? (
             <a href={`/u/${slug}`} className="auth-btn auth-btn-signup" style={{ fontSize: 12, padding: '6px 14px' }}>Globe Saya</a>
-          ) : (
+          ) : slug ? (
             <a href="/dashboard" className="auth-btn auth-btn-signup" style={{ fontSize: 12, padding: '6px 14px' }}>Dashboard</a>
+          ) : (
+            <a href="/dashboard" className="auth-btn auth-btn-create" style={{ fontSize: 12, padding: '6px 18px' }}>Buat Globe ✨</a>
           )}
         </>
       )}

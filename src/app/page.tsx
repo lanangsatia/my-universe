@@ -34,10 +34,10 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div id="flower-loading-overlay" style={{ display: 'block', position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)', zIndex: 999999, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', textAlign: 'center', color: '#fff', fontFamily: 'Arial,sans-serif', zIndex: 1 }}>
-          <div style={{ marginBottom: '30px' }}>
-            <img src="/assets/images/loading-love.png" alt="Love Planet" style={{ width: '60px', height: '60px', filter: 'drop-shadow(0 0 10px rgba(255,107,107,0.5))', animation: 'pulse 2s ease-in-out infinite' }} />
+      <div id="flower-loading-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)', zIndex: 999999, pointerEvents: 'none' }}>
+        <div style={{ textAlign: 'center', color: '#fff', fontFamily: 'Arial,sans-serif' }}>
+          <div style={{ marginBottom: '30px', textAlign: 'center' }}>
+            <img src="/assets/images/loading-love.png" alt="Love Planet" style={{ display: 'block', margin: '0 auto', width: '60px', height: '60px', filter: 'drop-shadow(0 0 10px rgba(255,107,107,0.5))', animation: 'pulse 2s ease-in-out infinite' }} />
           </div>
           <div style={{ width: '60px', height: '60px', border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 25px', boxShadow: '0 0 30px rgba(255,107,107,0.6)' }} />
           <div className="gradient-text" style={{ fontSize: '24px', fontWeight: 700, marginBottom: '15px', textShadow: '0 0 15px rgba(255,255,255,0.6)' }}>Love Planet</div>
@@ -73,14 +73,6 @@ export default function Home() {
         <i className="fas fa-question-circle" style={{ color: '#fff', fontSize: '20px' }} />
       </div> */}
 
-      {/* Monetization button */}
-      <a
-        href="/dashboard"
-        className="create-globe-btn"
-        style={{ display: showQuestion ? 'none' : 'flex' }}
-      >
-        ✨ Buat Globe
-      </a>
 
       {/* {showHelp && (
         <div ref={helpPanelRef} className="help-panel">

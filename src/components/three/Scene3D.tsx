@@ -205,24 +205,6 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
     sphereMesh.rotation.order = 'ZYX'; sphereMesh.rotation.z = 0.2;
     scene.add(sphereMesh);
 
-    // ===== NEBULA (nebula-system.js) — deferred =====
-    if (configRef.current.nebulaEnabled !== false) {
-    requestAnimationFrame(() => {
-    const nebCols = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff','#5f27cd','#00d2d3','#ff9f43'];
-    for (let i = 0; i < 25; i++) {
-      const cv = document.createElement('canvas'); cv.width = cv.height = 128;
-      const cx = cv.getContext('2d')!;
-      const gr = cx.createRadialGradient(64, 64, 0, 64, 64, 64);
-      gr.addColorStop(0, nebCols[Math.floor(Math.random() * nebCols.length)]);
-      gr.addColorStop(1, 'rgba(0,0,0,0)');
-      cx.fillStyle = gr; cx.fillRect(0, 0, 128, 128);
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, opacity: 0.15 + Math.random() * 0.25, depthWrite: false, blending: THREE.AdditiveBlending }));
-      const sc = 150 + Math.random() * 150; sp.scale.set(sc, sc, 1);
-      sp.position.set((Math.random() - 0.5) * 40000, (Math.random() - 0.5) * 40000, (Math.random() - 0.5) * 40000);
-      scene.add(sp);
-    }
-    });
-    }
 
     // ===== FLOWER RING (imageRing.js) — OPTIMIZED =====
     const flowerGroup = new THREE.Group(); scene.add(flowerGroup);
@@ -264,29 +246,13 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
     }
     if (photos.length > 0) loadFlowers(photos);
 
-    // ===== HEART MODEL (modelGlb.js) =====
-    let heartGroup: THREE.Group | null = null;
-    (async () => {
-      try {
-        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-        new GLTFLoader().load('/assets/images/heart_in_love.glb', (gltf) => {
-          heartGroup = new THREE.Group();
-          const m = gltf.scene; m.scale.set(1.2, 1.2, 1.2);
-          heartGroup.add(m); heartGroup.position.set(0, 115, 0);
-          heartGroup.visible = configRef.current.centralHeartEnabled === true;
-          scene.add(heartGroup);
-          const hl = new THREE.PointLight(0xffffff, 2, 1000); hl.position.set(0, 200, 100); scene.add(hl);
-          const hd = new THREE.DirectionalLight(0xffffff, 1); hd.position.set(0, 200, -100); scene.add(hd);
-        });
-      } catch (_) { /* silent */ }
-    })();
 
     // ===== METEOR SHOWER (meteors.js) — configurable =====
     let mCanvas: HTMLCanvasElement | null = null;
     let mCtx: CanvasRenderingContext2D | null = null;
     let meteors: any[] = [];
     let updateMeteors = () => {};
-    const meteorEnabled = configRef.current.meteorEnabled === true;
+    const meteorEnabled = configRef.current.meteorEnabled !== false;
     if (meteorEnabled) {
     mCanvas = document.createElement('canvas');
     mCanvas.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:2;';

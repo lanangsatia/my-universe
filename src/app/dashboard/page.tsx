@@ -21,20 +21,18 @@ const THEMES = {
 type ThemeKey = keyof typeof THEMES;
 
 interface GlobeConfig {
-  greetingText: string; questionText: string; globeText: string;
+  greetingText: string; questionText: string;
   globeColor: string; particleColor: string; diskColor: string;
   innerDiskColor: string; outermostColor: string; isGradient: boolean;
   size: number; rotationSpeed: number; particleSpeed: number;
-  centralHeartEnabled: boolean; text3dEnabled: boolean; nebulaEnabled: boolean;
   meteorEnabled: boolean; meteorColor: string; meteorSpeed: number; textColor: string;
 }
 
 const DEFAULT_CONFIG: GlobeConfig = {
-  greetingText: 'Hi', questionText: 'Wanna see something cute?', globeText: 'Hi',
+  greetingText: 'Hi', questionText: 'Wanna see something cute?',
   globeColor: '#a855f7', particleColor: '#ec4899', diskColor: '#a855f7',
   innerDiskColor: '#f5d0fe', outermostColor: '#ec4899', isGradient: true,
   size: 9, rotationSpeed: 0.002, particleSpeed: 2.0,
-  centralHeartEnabled: false, text3dEnabled: true, nebulaEnabled: false,
   meteorEnabled: false, meteorColor: '#00f0ff', meteorSpeed: 4, textColor: '#ffffff',
 };
 
@@ -201,7 +199,7 @@ export default function DashboardPage() {
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>✏️ Teks Tampilan</h2>
           <div style={{ marginBottom: 10 }}><label style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 4, display: 'block' }}>Sapaan Awal</label><input type="text" value={config.greetingText} onChange={e => setConfig(p => ({ ...p, greetingText: e.target.value }))} style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none' }} /></div>
           <div style={{ marginBottom: 10 }}><label style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 4, display: 'block' }}>Pertanyaan</label><input type="text" value={config.questionText} onChange={e => setConfig(p => ({ ...p, questionText: e.target.value }))} style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none' }} /></div>
-          <div><label style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 4, display: 'block' }}>Teks Globe (3D)</label><input type="text" value={config.globeText} onChange={e => setConfig(p => ({ ...p, globeText: e.target.value }))} style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none' }} /></div>
+
         </section>
 
         {/* SPEED */}
@@ -217,7 +215,7 @@ export default function DashboardPage() {
         <section style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 12 }}>✨ Efek Tambahan</h2>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {[{ key: 'meteorEnabled', label: '🌠 Hujan Meteor' }, { key: 'centralHeartEnabled', label: '❤️ Heart Model' }, { key: 'text3dEnabled', label: '🔤 Teks 3D' }, { key: 'nebulaEnabled', label: '🌌 Nebula' }].map(({ key, label }) => (
+            {[{ key: 'meteorEnabled', label: '🌠 Hujan Meteor' }].map(({ key, label }) => (
               <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer', padding: '8px 14px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <input type="checkbox" checked={(config as any)[key]} onChange={e => setConfig(p => ({ ...p, [key]: e.target.checked }))} />{label}
               </label>
