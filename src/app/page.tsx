@@ -1,11 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useUser } from '@clerk/nextjs';
 import Scene3D from '@/components/three/Scene3D';
 
 const SAMPLE_PHOTOS = Array.from({ length: 10 }, (_, i) => `/assets/images/photo${i + 1}.jpeg`);
+const DEFAULT_GREETING = 'Happy Anniversary Bubuyy 😘';
+const DEFAULT_QUESTION = 'Do you want to see our moments?';
 
 export default function Home() {
+  const { isSignedIn } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [showQuestion, setShowQuestion] = useState(true);
   const [isRotating, setIsRotating] = useState(true);
@@ -16,7 +20,32 @@ export default function Home() {
   const helpPanelRef = useRef<HTMLDivElement>(null);
   const helpIconRef = useRef<HTMLDivElement>(null);
 
+  // Dynamic data: user globe if logged in, else defaults
+  const [photos, setPhotos] = useState<string[] | null>(null);
+  const [greetingText, setGreetingText] = useState(DEFAULT_GREETING);
+  const [questionText, setQuestionText] = useState(DEFAULT_QUESTION);
+
   useEffect(() => { const t = setTimeout(() => setIsLoading(false), 3000); return () => clearTimeout(t); }, []);
+
+  // Fetch user globe data when logged in
+  useEffect(() => {
+    if (!isSignedIn) return;
+    let mounted = true;
+    fetch('/api/user/subscription')
+      .then(r => r.ok ? r.json() : null)
+      .then(sub => {
+        if (!mounted || !sub?.slug) return;
+        fetch(`/api/users/${sub.slug}`).then(r => r.json()).then(data => {
+          if (!mounted) return;
+          if (data.photos?.length) setPhotos(data.photos.map((p: any) => p.imageUrl));
+          if (data.config?.greetingText) setGreetingText(data.config.greetingText);
+          if (data.config?.questionText) setQuestionText(data.config.questionText);
+        }).catch(() => {});
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [isSignedIn]);
+
   useEffect(() => {
     const h = (e: MouseEvent) => { if (showHelp && helpPanelRef.current && helpIconRef.current && !helpPanelRef.current.contains(e.target as Node) && !helpIconRef.current.contains(e.target as Node)) setShowHelp(false); };
     document.addEventListener('click', h); return () => document.removeEventListener('click', h);
@@ -51,13 +80,13 @@ export default function Home() {
   return (
     <main style={{ width: '100%', height: '100vh', overflow: 'hidden', background: '#000', position: 'relative' }}>
       <div className="stars-bg" />
-      <Scene3D photos={SAMPLE_PHOTOS} autoRotate={isRotating} startAnimation={animTrigger} />
+      <Scene3D photos={photos || SAMPLE_PHOTOS} autoRotate={isRotating} startAnimation={animTrigger} />
 
       {showQuestion && (
         <div id="questionPanel" className="overlay-panel">
           <div className="panel-content">
-            <h2 id="greetingText" style={{ color: '#fff', fontSize: '1.8rem', marginBottom: '1rem' }}>Happy Anniversary Bubuyy 😘</h2>
-            <h2 id="questionText" style={{ color: '#fff', fontSize: '1.4rem', marginBottom: '2rem' }}>Do you want to see our moments?</h2>
+            <h2 id="greetingText" style={{ color: '#fff', fontSize: '1.8rem', marginBottom: '1rem' }}>{greetingText}</h2>
+            <h2 id="questionText" style={{ color: '#fff', fontSize: '1.4rem', marginBottom: '2rem' }}>{questionText}</h2>
             <div className="btn-group">
               <button id="btnYes" className="btn-yes" onClick={handleYes}>Of course 😍</button>
               <button id="noBtn" className="btn-no" onClick={(e) => {
