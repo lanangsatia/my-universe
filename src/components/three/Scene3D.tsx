@@ -170,7 +170,8 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
     sphereMesh.rotation.order = 'ZYX'; sphereMesh.rotation.z = 0.2;
     scene.add(sphereMesh);
 
-    // ===== NEBULA (nebula-system.js) =====
+    // ===== NEBULA (nebula-system.js) — deferred =====
+    requestAnimationFrame(() => {
     const nebCols = ['#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57','#ff9ff3','#54a0ff','#5f27cd','#00d2d3','#ff9f43'];
     for (let i = 0; i < 25; i++) {
       const cv = document.createElement('canvas'); cv.width = cv.height = 128;
@@ -184,8 +185,9 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       sp.position.set((Math.random() - 0.5) * 40000, (Math.random() - 0.5) * 40000, (Math.random() - 0.5) * 40000);
       scene.add(sp);
     }
+    });
 
-    // ===== FLOWER RING (imageRing.js) =====
+    // ===== FLOWER RING (imageRing.js) — OPTIMIZED =====
     const flowerGroup = new THREE.Group(); scene.add(flowerGroup);
     const fSprites: THREE.Sprite[] = []; let fLoaded = false;
     function loadFlowers(urls: string[]) {
@@ -195,43 +197,36 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
       urls.forEach((src, i) => {
         const img = new Image(); img.crossOrigin = 'anonymous';
         img.onload = () => { imgs[i] = img; ld++; if (ld === urls.length) {
-          // Pre-process each unique photo once (max 256px) and cache material
+          // Pre-process each unique photo: resize to canvas texture
           const matCache: THREE.SpriteMaterial[] = [];
           for (let k = 0; k < urls.length; k++) {
             const img3 = imgs[k];
             const iw = img3.naturalWidth || img3.width; const ih2 = img3.naturalHeight || img3.height;
-            const canvasW = iw, canvasH = ih2;
-            const cv2 = document.createElement('canvas'); cv2.width = canvasW; cv2.height = canvasH;
+            const cv2 = document.createElement('canvas'); cv2.width = iw; cv2.height = ih2;
             const cx2 = cv2.getContext('2d')!;
             cx2.drawImage(img3, 0, 0);
-            const imgData = cx2.getImageData(0, 0, canvasW, canvasH); const d2 = imgData.data;
-            const rad2 = Math.min(canvasW, canvasH) * 0.1;
-            for (let y = 0; y < canvasH; y++) for (let x = 0; x < canvasW; x++) {
-              const idx2 = (y * canvasW + x) * 4; const dX = Math.min(x, canvasW - x); const dY = Math.min(y, canvasH - y);
-              const dd = Math.sqrt(dX * dX + dY * dY);
-              if (dd < rad2) d2[idx2 + 3] = Math.floor(255 * Math.pow(dd / rad2, 0.5));
-            }
-            cx2.putImageData(imgData, 0, 0);
             const tex = new THREE.CanvasTexture(cv2);
             tex.colorSpace = THREE.SRGBColorSpace;
             tex.minFilter = THREE.NearestFilter; tex.magFilter = THREE.NearestFilter;
             tex.needsUpdate = true;
             matCache[k] = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false, sizeAttenuation: true, toneMapped: false, alphaTest: 0.01 });
           }
-          // Create 800 sprites sharing the pre-processed materials
-          for (let j = 0; j < 800; j++) {
-            const mat = matCache[j % urls.length];
-            const spr = new THREE.Sprite(mat);
-            const angle = Math.random() * Math.PI * 2;
-            const radius = 130 + Math.random() * 400;
-            const pY = (Math.random() - 0.5) * 16;
-            spr.position.set(Math.cos(angle) * radius, pY, Math.sin(angle) * radius);
-            const sprSz = 10 + Math.random() * 3;
-            spr.scale.set(sprSz, sprSz, 1);
-            spr.lookAt(0, pY, 0);
-            flowerGroup.add(spr); fSprites.push(spr);
-          }
-          fLoaded = true;
+          // Create 500 sprites sharing the pre-processed materials — deferred for smooth init
+          requestAnimationFrame(() => {
+            for (let j = 0; j < 500; j++) {
+              const mat = matCache[j % urls.length];
+              const spr = new THREE.Sprite(mat);
+              const angle = Math.random() * Math.PI * 2;
+              const radius = 130 + Math.random() * 400;
+              const pY = (Math.random() - 0.5) * 16;
+              spr.position.set(Math.cos(angle) * radius, pY, Math.sin(angle) * radius);
+              const sprSz = 10 + Math.random() * 3;
+              spr.scale.set(sprSz, sprSz, 1);
+              spr.lookAt(0, pY, 0);
+              flowerGroup.add(spr); fSprites.push(spr);
+            }
+            fLoaded = true;
+          });
         }};
         img.onerror = () => { ld++; if (ld === urls.length) fLoaded = true; };
         img.src = src;
