@@ -78,19 +78,26 @@ export default function UserGlobePage() {
     <main style={{ width: '100%', height: '100vh', overflow: 'hidden', background: '#000', position: 'relative' }}>
       <Scene3D key={slug} photos={user.photos.map(p => p.imageUrl)} autoRotate={isRotating} config={cfg} startAnimation={animTrigger} />
 
-      {/* Greeting overlay */}
+      {/* Greeting overlay with Yes/No buttons */}
       {showGreeting && (
-        <div style={{
-          position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.7)', zIndex: 100, cursor: 'pointer',
-        }} onClick={() => { setShowGreeting(false); setAnimTrigger(n => n + 1); if (audioRef.current) { audioRef.current.play().catch(() => {}); setIsMuted(false); } }}>
-          <div style={{ textAlign: 'center', padding: 20 }}>
+        <div className="overlay-panel" style={{ cursor: 'default' }}>
+          <div className="panel-content">
             <h2 style={{ color: '#fff', fontSize: 'clamp(20px,5vw,36px)', fontWeight: 700, marginBottom: 12 }}>
               {cfg.greetingText || `Hi`} 😘
             </h2>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 'clamp(14px,3vw,22px)' }}>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 'clamp(14px,3vw,22px)', marginBottom: 24 }}>
               {cfg.questionText || 'Tap to see the universe'}
             </p>
+            <div className="btn-group">
+              <button className="btn-yes" onClick={() => { setShowGreeting(false); setAnimTrigger(n => n + 1); if (audioRef.current) { audioRef.current.play().catch(() => {}); setIsMuted(false); } }}>Of course 😍</button>
+              <button className="btn-no" onClick={(e) => {
+                const b = e.currentTarget;
+                b.style.position = 'fixed';
+                b.style.transition = 'all 0.15s ease';
+                b.style.left = Math.random() * (window.innerWidth - 120) + 'px';
+                b.style.top = Math.random() * (window.innerHeight - 50) + 'px';
+              }}>No way 🙂‍↔️</button>
+            </div>
           </div>
         </div>
       )}

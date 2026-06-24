@@ -5,7 +5,7 @@ import { useUser } from '@clerk/nextjs';
 import Scene3D from '@/components/three/Scene3D';
 
 const SAMPLE_PHOTOS = Array.from({ length: 10 }, (_, i) => `/assets/images/photo${i + 1}.jpeg`);
-const DEFAULT_GREETING = 'Happy Anniversary Bubuyy 😘';
+const DEFAULT_GREETING = 'Hi, welcome to my universe!';
 const DEFAULT_QUESTION = 'Do you want to see our moments?';
 
 export default function Home() {
@@ -90,8 +90,11 @@ export default function Home() {
             <div className="btn-group">
               <button id="btnYes" className="btn-yes" onClick={handleYes}>Of course 😍</button>
               <button id="noBtn" className="btn-no" onClick={(e) => {
-                const b = e.currentTarget; const c = b.parentElement!; const r = c.getBoundingClientRect();
-                b.style.position = 'absolute'; b.style.left = Math.random() * (r.width - 100) + 'px'; b.style.top = Math.random() * (r.height - 50) + 'px';
+                const b = e.currentTarget;
+                b.style.position = 'fixed';
+                b.style.transition = 'all 0.15s ease';
+                b.style.left = Math.random() * (window.innerWidth - 120) + 'px';
+                b.style.top = Math.random() * (window.innerHeight - 50) + 'px';
               }}>No way 🙂‍↔️</button>
             </div>
           </div>
