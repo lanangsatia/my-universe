@@ -15,14 +15,19 @@ export default function AuthBar() {
   useEffect(() => {
     if (!isSignedIn) return;
     let mounted = true;
-    fetch('/api/user/subscription')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!mounted) return;
-        if (data?.slug) setSlug(data.slug);
-      })
-      .catch(() => {});
-    return () => { mounted = false; };
+    const fetchSlug = () => {
+      fetch('/api/user/subscription')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!mounted) return;
+          if (data?.slug) setSlug(data.slug);
+        })
+        .catch(() => {});
+    };
+    fetchSlug();
+    // Poll every 5s untuk update setelah globe terbit
+    const interval = setInterval(fetchSlug, 5000);
+    return () => { mounted = false; clearInterval(interval); };
   }, [isSignedIn]);
 
   return (

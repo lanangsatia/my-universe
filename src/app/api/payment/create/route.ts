@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPaymentInvoice } from '@/lib/xendit';
 import { prisma } from '@/lib/prisma';
+import { createSnapTransaction } from '@/lib/midtrans';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,16 +11,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing package or amount' }, { status: 400 });
     }
 
-    // Create payment record
-    const invoice = await createPaymentInvoice({
-      package: pkg,
-      amount,
-    });
+    const orderId = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-    // Save payment to database
+    // Create Midtrans Snap transaction
+    const snap = await createSnapTransaction(amount, orderId);
+
+    // Save payment record
     await prisma.payment.create({
       data: {
-        orderId: invoice.order_id,
+        orderId,
         package: pkg,
         amount,
         status: 'PENDING',
@@ -28,8 +27,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      order_id: invoice.order_id,
-      invoice_url: invoice.invoice_url,
+      order_id: orderId,
+      token: snap.token,
+      redirect_url: snap.redirect_url,
     });
   } catch (error) {
     console.error('Payment creation error:', error);

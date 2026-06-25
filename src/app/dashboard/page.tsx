@@ -52,6 +52,28 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Payment state
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentRef, setPaymentRef] = useState('');
+  const [paymentQr, setPaymentQr] = useState('');
+  const [paymentToken, setPaymentToken] = useState('');
+  const [paymentRedirectUrl, setPaymentRedirectUrl] = useState('');
+  const payingRef = useRef(false);
+
+  // Load Midtrans Snap script
+  useEffect(() => {
+    if (document.getElementById('midtrans-snap')) return;
+    const script = document.createElement('script');
+    script.src = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true'
+      ? 'https://app.midtrans.com/snap/snap.js'
+      : 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.id = 'midtrans-snap';
+    script.setAttribute('data-client-key', process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '');
+    document.body.appendChild(script);
+  }, []);
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [paymentAmount] = useState(29999); // Harga tetap
+
   useEffect(() => {
     Promise.all([
       fetch('/api/user/subscription').then(r => r.json()),
@@ -107,8 +129,7 @@ export default function DashboardPage() {
     setSavingConfig(false);
   };
 
-  const handlePublish = async () => {
-    if (newPhotos.length === 0) { alert('Pilih minimal 1 foto.'); return; }
+  const doPublish = async () => {
     setPublishing(true);
     try {
       const formData = new FormData();
@@ -119,14 +140,58 @@ export default function DashboardPage() {
       const data = await res.json();
       if (!res.ok) { alert(data.error || 'Gagal'); setPublishing(false); return; }
       setPublishedUrl(`${window.location.origin}${data.url}`);
-      // Tambah foto baru ke existingImages agar langsung muncul tanpa reload
       if (data.photos?.length) {
         const newExisting = data.photos.map((p: any) => ({ id: p.id, url: p.imageUrl }));
         setExistingImages(prev => [...prev, ...newExisting]);
       }
       setNewPhotos([]);
+      setShowPayment(false);
     } catch { alert('Terjadi kesalahan.'); }
     setPublishing(false);
+  };
+
+  const handlePublish = async () => {
+    if (newPhotos.length === 0) { alert('Pilih minimal 1 foto.'); return; }
+    // Skip payment if bypass param or already published
+    if (publishedUrl) { doPublish(); return; }
+    // Create QRIS payment
+    setPublishing(true);
+    try {
+      const res = await fetch('/api/payment/qris', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: paymentAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Gagal membuat pembayaran'); setPublishing(false); return; }
+      setPaymentRef(data.reference_id);
+      setPaymentToken(data.token || '');
+      setPaymentRedirectUrl(data.redirect_url || '');
+      // Generate QR dari redirect_url
+      if (data.redirect_url) {
+        QRCode.toDataURL(data.redirect_url, { width: 200, margin: 1 })
+          .then(setPaymentQr)
+          .catch(() => {});
+      }
+      setPaymentStatus('PENDING');
+      setShowPayment(true);
+      setPublishing(false);
+
+      // Poll payment status
+      const poll = setInterval(async () => {
+        const r = await fetch(`/api/payment/status/${data.reference_id}`);
+        const d = await r.json();
+        if (d.status === 'PAID') {
+          clearInterval(poll);
+          setPaymentStatus('PAID');
+          alert('✅ Pembayaran berhasil! Globe sedang diterbitkan...');
+          doPublish();
+        }
+      }, 3000);
+
+      // Timeout after 5 minutes
+      setTimeout(() => clearInterval(poll), 300000);
+    } catch { alert('Terjadi kesalahan.'); setPublishing(false); }
   };
 
   if (loading) return <main style={{ minHeight: '100vh', background: '#0a0015', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p>Loading...</p></main>;
@@ -183,6 +248,60 @@ export default function DashboardPage() {
           </div>
           <button onClick={handlePublish} disabled={newPhotos.length === 0 || publishing} style={{ marginTop: 12, width: '100%', padding: '14px 0', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: newPhotos.length === 0 || publishing ? 'not-allowed' : 'pointer', background: newPhotos.length === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', opacity: newPhotos.length === 0 ? 0.5 : 1 }}>{publishing ? 'Menyimpan...' : publishedUrl ? 'Simpan Perubahan ✨' : 'Terbitkan Globe ✨'}</button>
         </section>
+
+        {/* QRIS PAYMENT MODAL */}
+        {showPayment && (
+          <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 99999, backdropFilter: 'blur(8px)' }}>
+            <div style={{ background: '#1a1a2e', borderRadius: 20, padding: '32px 28px', maxWidth: 380, width: '90%', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>💳</div>
+              <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Bayar untuk Terbitkan</h3>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 16 }}>Klik tombol di bawah untuk membayar via QRIS/GoPay/OVO/Bank Transfer</p>
+              <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 16, background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rp {paymentAmount.toLocaleString('id-ID')}</div>
+              {paymentToken ? (
+                <button onClick={() => {
+                  if (payingRef.current) return;
+                  payingRef.current = true;
+                  (window as any).snap.pay(paymentToken, {
+                    onSuccess: async () => {
+                      await fetch('/api/payment/simulate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: paymentRef }),
+                      });
+                      setPaymentStatus('PAID');
+                      payingRef.current = false;
+                    },
+                    onPending: () => { payingRef.current = false; },
+                    onError: () => { payingRef.current = false; alert('Pembayaran gagal, coba lagi.'); },
+                    onClose: () => { payingRef.current = false; },
+                  });
+                }} style={{ display: 'inline-block', marginBottom: 12, padding: '14px 32px', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 15, border: 'none', cursor: 'pointer' }}>💳 Bayar Sekarang</button>
+              ) : (
+                paymentRedirectUrl && (
+                  <a href={paymentRedirectUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginBottom: 12, padding: '14px 32px', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 15 }}>💳 Bayar Sekarang</a>
+                )
+              )}
+            
+              {paymentStatus === 'PAID' ? (
+                <div style={{ padding: '12px 0', color: '#22c55e', fontSize: 15, fontWeight: 600 }}>✅ Pembayaran berhasil! Menerbitkan globe...</div>
+              ) : process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true' ? (
+                <button onClick={() => { setShowPayment(false); }} style={{ width: '100%', padding: '14px 32px', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Tutup</button>
+              ) : (
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button onClick={() => { setShowPayment(false); }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Batal</button>
+                  <button onClick={async () => {
+                    await fetch('/api/payment/simulate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ order_id: paymentRef }),
+                    });
+                    setPaymentStatus('PAID');
+                  }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Simulasi Bayar ✅</button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* THEME */}
         <section style={{ marginBottom: 32 }}>
