@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 export default function AuthBar() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const pathname = usePathname();
   const [slug, setSlug] = useState<string | null>(null);
+  const isAdmin = user?.publicMetadata?.isAdmin === true;
 
   // Sembunyikan navbar di halaman publik globe /u/[slug]
   if (pathname.startsWith('/u/')) return null;
@@ -15,19 +16,14 @@ export default function AuthBar() {
   useEffect(() => {
     if (!isSignedIn) return;
     let mounted = true;
-    const fetchSlug = () => {
-      fetch('/api/user/subscription')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (!mounted) return;
-          if (data?.slug) setSlug(data.slug);
-        })
-        .catch(() => {});
-    };
-    fetchSlug();
-    // Poll every 5s untuk update setelah globe terbit
-    const interval = setInterval(fetchSlug, 5000);
-    return () => { mounted = false; clearInterval(interval); };
+    fetch('/api/user/subscription')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!mounted) return;
+        if (data?.slug) setSlug(data.slug);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
   }, [isSignedIn]);
 
   return (
@@ -46,14 +42,16 @@ export default function AuthBar() {
       {isSignedIn && (
         <>
           <UserButton />
-          {pathname === '/dashboard' && slug ? (
+          {pathname !== '/admin' && (isAdmin ? (
+            <a href="/admin" className="auth-btn auth-btn-signup" style={{ fontSize: 12, padding: '6px 14px' }}>⚙️ Admin</a>
+          ) : pathname === '/dashboard' && slug ? (
             <a href={`/u/${slug}`} className="auth-btn auth-btn-signup" style={{ fontSize: 12, padding: '6px 14px' }}>Globe Saya</a>
           ) : slug ? (
             <a href="/dashboard" className="auth-btn auth-btn-signup" style={{ fontSize: 12, padding: '6px 14px' }}>Dashboard</a>
           ) : (
             <a href="/dashboard" className="auth-btn auth-btn-create" style={{ fontSize: 12, padding: '6px 18px' }}>Buat Globe ✨</a>
-          )}
-        </>
+          )
+        )}</>
       )}
     </div>
   );

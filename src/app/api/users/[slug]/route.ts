@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { clerkClient } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(
@@ -14,6 +15,7 @@ export async function GET(
         name: true,
         slug: true,
         config: true,
+        clerkId: true,
         photos: {
           select: { id: true, imageUrl: true },
           orderBy: { createdAt: 'asc' },
@@ -23,6 +25,16 @@ export async function GET(
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check if user is banned via Clerk
+    let banned = false;
+    if (user.clerkId) {
+      try {
+        const client = await clerkClient();
+        const clerkUser = await client.users.getUser(user.clerkId);
+        banned = clerkUser.banned;
+      } catch {}
     }
 
     // Convert R2 public URLs to proxy URLs
@@ -38,6 +50,7 @@ export async function GET(
       name: user.name,
       slug: user.slug,
       config: user.config || {},
+      banned,
       photos,
     });
   } catch (error) {

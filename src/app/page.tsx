@@ -27,7 +27,22 @@ export default function Home() {
 
   useEffect(() => { const t = setTimeout(() => setIsLoading(false), 3000); return () => clearTimeout(t); }, []);
 
-  // Fetch user globe data when logged in
+  // Fetch landing defaults (public) for non-logged-in visitors
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/admin/landing')
+      .then(r => r.json())
+      .then(data => {
+        if (!mounted) return;
+        if (data.photoUrls?.length) setPhotos(data.photoUrls);
+        if (data.greetingText) setGreetingText(data.greetingText);
+        if (data.questionText) setQuestionText(data.questionText);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  // If logged in & has globe, override with personal data
   useEffect(() => {
     if (!isSignedIn) return;
     let mounted = true;

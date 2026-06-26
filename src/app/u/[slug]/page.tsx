@@ -32,7 +32,7 @@ interface GlobeConfig {
 export default function UserGlobePage() {
   const params = useParams();
   const slug = params.slug as string;
-  const [user, setUser] = useState<{ name: string; slug: string; photos: { imageUrl: string }[]; config?: GlobeConfig } | null>(null);
+  const [user, setUser] = useState<{ name: string; slug: string; photos: { imageUrl: string }[]; config?: GlobeConfig; banned?: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showGreeting, setShowGreeting] = useState(true);
@@ -54,6 +54,21 @@ export default function UserGlobePage() {
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: 60, height: 60, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 24px' }} />
           <p>Loading globe...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show ban notification
+  if (user?.banned) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'Segoe UI', sans-serif" }}>
+        <div style={{ textAlign: 'center', padding: 20 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Globe Tidak Aktif</h1>
+          <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 400 }}>
+            Globe ini sedang tidak aktif karena akun pengguna telah dinonaktifkan.
+          </p>
         </div>
       </div>
     );
