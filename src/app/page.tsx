@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
 import Scene3D from '@/components/three/Scene3D';
+import { preloadTextures } from '@/lib/texture-cache';
 
 const SAMPLE_PHOTOS = Array.from({ length: 5 }, (_, i) => `/assets/images/${i + 1}.jpeg`);
 const DEFAULT_GREETING = 'Hi, welcome to my universe!';
@@ -26,19 +27,34 @@ export default function Home() {
   const [questionText, setQuestionText] = useState(DEFAULT_QUESTION);
   const [dataReady, setDataReady] = useState(false);
 
-  // Keep loading overlay until ALL data is fetched (or max 5s timeout)
+  // Keep loading overlay until ALL data is fetched AND photos are preloaded
   useEffect(() => {
     let mounted = true;
     let resolved = 0;
-    const checkDone = () => { if (!mounted) return; resolved++; if (resolved >= 2) { setDataReady(true); setTimeout(() => setIsLoading(false), 500); } };
-    const fallback = setTimeout(() => { if (!mounted) return; setDataReady(true); setIsLoading(false); }, 5000);
+    let photoUrlsToLoad: string[] = [];
+
+    const checkDone = async () => {
+      if (!mounted) return;
+      resolved++;
+      if (resolved >= 2) {
+        // Preload all photos before hiding loading overlay
+        if (photoUrlsToLoad.length > 0) {
+          await preloadTextures(photoUrlsToLoad);
+        }
+        if (mounted) {
+          setDataReady(true);
+          setTimeout(() => setIsLoading(false), 300);
+        }
+      }
+    };
+    const fallback = setTimeout(() => { if (!mounted) return; setDataReady(true); setIsLoading(false); }, 8000);
 
     // Fetch landing defaults (public)
     fetch('/api/admin/landing')
       .then(r => r.json())
       .then(data => {
         if (!mounted) return;
-        if (data.photoUrls?.length) setPhotos(data.photoUrls);
+        if (data.photoUrls?.length) { photoUrlsToLoad = data.photoUrls; setPhotos(data.photoUrls); }
         if (data.greetingText) setGreetingText(data.greetingText);
         if (data.questionText) setQuestionText(data.questionText);
       })
@@ -52,11 +68,11 @@ export default function Home() {
         if (!mounted || !sub?.slug) { checkDone(); return; }
         const data = await fetch(`/api/users/${sub.slug}`).then(r => r.json());
         if (!mounted) return;
-        if (data.photos?.length) setPhotos(data.photos.map((p: any) => p.imageUrl));
+        if (data.photos?.length) { photoUrlsToLoad = data.photos.map((p: any) => p.imageUrl); setPhotos(photoUrlsToLoad); }
         if (data.config?.greetingText) setGreetingText(data.config.greetingText);
         if (data.config?.questionText) setQuestionText(data.config.questionText);
       } catch {}
-      if (mounted) checkDone();
+      checkDone();
     };
     if (isSignedIn) fetchUserGlobe(); else checkDone();
 
@@ -88,7 +104,9 @@ export default function Home() {
           <div style={{ width: '60px', height: '60px', border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 25px', boxShadow: '0 0 30px rgba(255,107,107,0.6)' }} />
           <div className="gradient-text" style={{ fontSize: '24px', fontWeight: 700, marginBottom: '15px', textShadow: '0 0 15px rgba(255,255,255,0.6)' }}>Love Planet</div>
           <div style={{ fontSize: '18px', fontWeight: 500, marginBottom: '10px', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>A world shaped with love, just for you...</div>
-          <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Just a moment ✨</div>
+          {photos && photos.length > 0
+            ? <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Menyiapkan {photos.length} foto kenangan ✨</div>
+            : <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Just a moment ✨</div>}
         </div>
       </div>
     );

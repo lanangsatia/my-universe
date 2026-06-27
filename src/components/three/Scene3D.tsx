@@ -32,6 +32,35 @@ interface Scene3DProps {
   };
 }
 
+// Texture cache — use shared cache from lib. If image was preloaded by page,
+// create THREE.Texture directly from cached Image (zero network).
+// Fallback to TextureLoader if not cached.
+import { getCachedImage } from '@/lib/texture-cache';
+const textureLoader = new THREE.TextureLoader();
+
+function getCachedTexture(url: string): Promise<THREE.Texture> {
+  return new Promise((resolve) => {
+    // Try shared image cache first (preloaded by page component)
+    const cachedImg = getCachedImage(url);
+    if (cachedImg) {
+      const tex = new THREE.Texture(cachedImg);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.needsUpdate = true;
+      resolve(tex);
+      return;
+    }
+    // Fallback: load via TextureLoader
+    textureLoader.load(url, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      resolve(tex);
+    });
+  });
+}
+
 export default function Scene3D({ photos = [], autoRotate = true, startAnimation = 0, onSceneReady, config = {} }: Scene3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const autoRotateRef = useRef(autoRotate);
@@ -216,32 +245,23 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
     function loadFlowers(urls: string[]) {
       fSprites.forEach(s => { flowerGroup.remove(s); s.material.dispose(); }); fSprites.length = 0; fLoaded = false;
       if (urls.length === 0) return;
-      const loader = new THREE.TextureLoader();
-      const matCache: THREE.SpriteMaterial[] = [];
-      let ld = 0;
-      urls.forEach((src, i) => {
-        loader.load(src, (tex) => {
-          tex.colorSpace = THREE.SRGBColorSpace;
-          tex.minFilter = THREE.LinearFilter;
-          tex.magFilter = THREE.LinearFilter;
-          matCache[i] = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false, sizeAttenuation: true });
-          ld++;
-          if (ld === urls.length) {
-            for (let j = 0; j < 500; j++) {
-              const mat = matCache[j % urls.length];
-              const spr = new THREE.Sprite(mat);
-              const angle = Math.random() * Math.PI * 2;
-              const radius = 130 + Math.random() * 400;
-              const pY = (Math.random() - 0.5) * 16;
-              spr.position.set(Math.cos(angle) * radius, pY, Math.sin(angle) * radius);
-              spr.scale.set(12, 12, 1);
-              spr.lookAt(0, pY, 0);
-              flowerGroup.add(spr); fSprites.push(spr);
-            }
-            fLoaded = true;
-            fLoadedRef.current = true;
-          }
-        });
+
+      // Load ALL textures first (via cache), then create all sprites at once
+      Promise.all(urls.map(src => getCachedTexture(src))).then((textures) => {
+        for (let j = 0; j < 500; j++) {
+          const tex = textures[j % textures.length];
+          const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true, depthWrite: false, sizeAttenuation: true });
+          const spr = new THREE.Sprite(mat);
+          const angle = Math.random() * Math.PI * 2;
+          const radius = 130 + Math.random() * 400;
+          const pY = (Math.random() - 0.5) * 16;
+          spr.position.set(Math.cos(angle) * radius, pY, Math.sin(angle) * radius);
+          spr.scale.set(12, 12, 1);
+          spr.lookAt(0, pY, 0);
+          flowerGroup.add(spr); fSprites.push(spr);
+        }
+        fLoaded = true;
+        fLoadedRef.current = true;
       });
     }
     if (photos.length > 0) loadFlowers(photos);

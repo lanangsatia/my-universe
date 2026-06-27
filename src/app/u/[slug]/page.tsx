@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { preloadTexture } from '@/lib/texture-cache';
 
 const Scene3D = dynamic(() => import('@/components/three/Scene3D'), { ssr: false });
 
@@ -42,18 +43,28 @@ export default function UserGlobePage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    let mounted = true;
     fetch(`/api/users/${slug}`)
       .then(res => { if (!res.ok) throw new Error('Not found'); return res.json(); })
-      .then(data => { setUser(data); setLoading(false); })
-      .catch(() => { setError(true); setLoading(false); });
+      .then(async (data) => {
+        if (!mounted) return;
+        // Preload all photos before hiding loading overlay
+        if (data.photos?.length) {
+          await Promise.all(data.photos.map((p: any) => preloadTexture(p.imageUrl)));
+        }
+        if (mounted) { setUser(data); setLoading(false); }
+      })
+      .catch(() => { if (mounted) setError(true); setLoading(false); });
+    return () => { mounted = false; };
   }, [slug]);
 
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'Segoe UI', sans-serif" }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 60, height: 60, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 24px' }} />
-          <p>Loading globe...</p>
+          <div style={{ width: 60, height: 60, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 24px', boxShadow: '0 0 30px rgba(255,107,107,0.6)' }} />
+          <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, background: 'linear-gradient(135deg, #ff6b6b, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Memuat Globe...</div>
+          {user?.photos?.length ? <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Menyiapkan {user.photos.length} foto kenangan ✨</div> : <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>Sebentar ya ✨</div>}
         </div>
       </div>
     );
@@ -98,7 +109,7 @@ export default function UserGlobePage() {
         <div className="overlay-panel" style={{ cursor: 'default' }}>
           <div className="panel-content">
             <h2 style={{ color: '#fff', fontSize: 'clamp(20px,5vw,36px)', fontWeight: 700, marginBottom: 12 }}>
-              {cfg.greetingText || `Hi`} 😘
+              {cfg.greetingText || `Hi`}
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 'clamp(14px,3vw,22px)', marginBottom: 24 }}>
               {cfg.questionText || 'Tap to see the universe'}
