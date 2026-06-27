@@ -38,10 +38,19 @@ export default function AdminPage() {
   );
 }
 
+function Spinner({ text }: { text?: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 16 }}>
+      <div style={{ width: 48, height: 48, border: '4px solid rgba(255,255,255,0.15)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', boxShadow: '0 0 20px rgba(255,107,107,0.4)' }} />
+      <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>{text || 'Memuat...'}</span>
+    </div>
+  );
+}
+
 function StatsTab({ onError }: { onError: (e: string) => void }) {
   const [data, setData] = useState<any>(null);
   useEffect(() => { fetch('/api/admin/stats').then(r => r.ok ? r.json() : Promise.reject()).then(setData).catch(() => onError('Akses ditolak')); }, []);
-  if (!data) return <p style={{ color: 'rgba(255,255,255,0.4)' }}>Loading...</p>;
+  if (!data) return <Spinner text="Memuat statistik..." />;
   const cards = [
     { label: 'Total User (DB)', value: data.totalUsers, color: '#a855f7' },
     { label: 'User Clerk', value: data.totalClerkUsers, color: '#7c3aed' },
@@ -71,17 +80,21 @@ function UsersTab({ onError }: { onError: (e: string) => void }) {
   const [editConfig, setEditConfig] = useState<any>({});
   const [editSlug, setEditSlug] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const loadUsers = () => fetch('/api/admin/users').then(r => r.ok ? r.json() : Promise.reject()).then(d => { setUsers(d.users); setLoading(false); }).catch(() => { onError('Akses ditolak'); });
   useEffect(() => { loadUsers(); }, []);
 
   const openEdit = async (id: string) => {
     setEditId(id);
+    setLoadingEdit(true);
     const res = await fetch(`/api/admin/users/${id}`);
-    if (!res.ok) return;
+    if (!res.ok) { setLoadingEdit(false); return; }
     const data = await res.json();
     setEditData(data);
     setEditConfig(data.config || {});
     setEditSlug(data.slug || '');
+    setLoadingEdit(false);
   };
 
   const saveEdit = async () => {
@@ -104,9 +117,20 @@ function UsersTab({ onError }: { onError: (e: string) => void }) {
     openEdit(editId!);
   };
 
-  const toggleBan = async (id: string, active: boolean) => { await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: active ? 'ban' : 'unban' }) }); loadUsers(); };
-  const del = async (id: string, name: string) => { if (!confirm(`Hapus "${name}"?`)) return; await fetch(`/api/admin/users/${id}`, { method: 'DELETE' }); loadUsers(); };
-  if (loading) return <p style={{ color: 'rgba(255,255,255,0.4)' }}>Loading...</p>;
+  const toggleBan = async (id: string, active: boolean, name: string) => {
+    setActionLoading(`ban-${id}`);
+    await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: active ? 'ban' : 'unban' }) });
+    setActionLoading(null);
+    loadUsers();
+  };
+  const del = async (id: string, name: string) => {
+    if (!confirm(`Hapus "${name}"? Semua data akan hilang!`)) return;
+    setActionLoading(`del-${id}`);
+    await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+    setActionLoading(null);
+    loadUsers();
+  };
+  if (loading) return <Spinner text="Memuat users..." />;
   return (
     <div>
       <div style={{ overflowX: 'auto' }}>
@@ -142,8 +166,8 @@ function UsersTab({ onError }: { onError: (e: string) => void }) {
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                     <button onClick={() => openEdit(u.id)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, background: 'transparent', color: '#a855f7', cursor: 'pointer' }}>Edit</button>
-                    <button onClick={() => toggleBan(u.id, u.isActive)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, background: 'transparent', color: u.isActive ? '#ef4444' : '#22c55e', cursor: 'pointer' }}>{u.isActive ? 'Ban' : 'Unban'}</button>
-                    <button onClick={() => del(u.id, u.name)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid #ef4444', borderRadius: 6, background: 'transparent', color: '#ef4444', cursor: 'pointer' }}>Hapus</button>
+                    <button onClick={() => toggleBan(u.id, u.isActive, u.name)} disabled={actionLoading === `ban-${u.id}`} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, background: 'transparent', color: u.isActive ? '#ef4444' : '#22c55e', cursor: actionLoading === `ban-${u.id}` ? 'wait' : 'pointer', opacity: actionLoading === `ban-${u.id}` ? 0.6 : 1 }}>{actionLoading === `ban-${u.id}` ? '⏳' : u.isActive ? 'Ban' : 'Unban'}</button>
+                    <button onClick={() => del(u.id, u.name)} disabled={actionLoading === `del-${u.id}`} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid #ef4444', borderRadius: 6, background: 'transparent', color: '#ef4444', cursor: actionLoading === `del-${u.id}` ? 'wait' : 'pointer', opacity: actionLoading === `del-${u.id}` ? 0.6 : 1 }}>{actionLoading === `del-${u.id}` ? '⏳' : 'Hapus'}</button>
                   </div>
                 </td>
               </tr>
@@ -153,7 +177,12 @@ function UsersTab({ onError }: { onError: (e: string) => void }) {
       </div>
 
       {/* Edit Globe Modal */}
-      {editId && editData && (
+      {editId && loadingEdit && (
+        <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', zIndex: 99999, backdropFilter: 'blur(8px)' }}>
+          <Spinner text="Memuat data globe..." />
+        </div>
+      )}
+      {editId && editData && !loadingEdit && (
         <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', zIndex: 99999, backdropFilter: 'blur(8px)' }}>
           <div style={{ background: '#1a1a2e', borderRadius: 20, padding: '28px 24px', maxWidth: 500, width: '90%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -267,6 +296,7 @@ function PaymentsTab({ onError }: { onError: (e: string) => void }) {
   const [loading, setLoading] = useState(true);
   const fetchPay = (s: string) => { setLoading(true); fetch(`/api/admin/payments?status=${s}`).then(r => r.ok ? r.json() : Promise.reject()).then(d => { setPayments(d.payments); setLoading(false); }).catch(() => { onError('Akses ditolak'); }); };
   useEffect(() => { fetchPay(filter); }, [filter]);
+  if (loading) return <Spinner text="Memuat pembayaran..." />;
   const markPaid = async (oid: string) => { await fetch('/api/payment/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: oid }) }); fetchPay(filter); };
   return (
     <div>
@@ -314,15 +344,19 @@ function LandingTab({ onError }: { onError: (e: string) => void }) {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncRes, setSyncRes] = useState('');
+  const [landingLoading, setLandingLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setLandingLoading(true);
     fetch('/api/admin/landing').then(r => r.json()).then(d => {
       if (d.greetingText) setGreeting(d.greetingText);
       if (d.questionText) setQuestion(d.questionText);
       if (d.photoUrls?.length) setPhotos(d.photoUrls.map((u: string) => ({ id: u, url: u })));
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setLandingLoading(false));
   }, []);
+
+  if (landingLoading) return <Spinner text="Memuat data landing..." />;
 
   const saveLanding = async () => {
     setSaving(true);

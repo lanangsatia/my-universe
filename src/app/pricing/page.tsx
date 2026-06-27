@@ -36,6 +36,12 @@ const PLANS = [
   },
 ];
 
+const LOADING_OVERLAY = {
+  position: 'fixed' as const, inset: 0, zIndex: 99999,
+  display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 20,
+  background: 'rgba(10,0,21,0.92)', backdropFilter: 'blur(12px)',
+};
+
 export default function PricingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
@@ -70,6 +76,14 @@ export default function PricingPage() {
       position: 'relative',
       overflow: 'hidden',
     }}>
+      {/* Loading overlay */}
+      {loading && (
+        <div style={LOADING_OVERLAY}>
+          <div style={{ width: 60, height: 60, border: '4px solid rgba(255,255,255,0.15)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', boxShadow: '0 0 30px rgba(255,107,107,0.6)' }} />
+          <div style={{ fontSize: 18, fontWeight: 600, background: 'linear-gradient(135deg, #ff6b6b, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Memproses pembayaran...</div>
+          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Mohon tunggu sebentar</div>
+        </div>
+      )}
       {/* Stars background */}
       <div style={{
         position: 'fixed', inset: 0,

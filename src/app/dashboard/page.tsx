@@ -75,18 +75,25 @@ export default function DashboardPage() {
   const [paymentAmount] = useState(29999); // Harga tetap
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/user/subscription').then(r => r.json()),
-      fetch('/api/globe/settings').then(r => r.json()),
-    ]).then(([sub, cfg]) => {
-      if (sub.slug) {
-        setSlug(sub.slug);
-        fetch(`/api/users/${sub.slug}`).then(r => r.json()).then(u => {
-          if (u.photos) { setTitle(u.name || ''); setPublishedUrl(`${window.location.origin}/u/${sub.slug}`); setExistingImages(u.photos.map((p: any) => ({ id: p.id, url: p.imageUrl }))); }
-        }).catch(() => {});
-      }
-      if (cfg && cfg.globeColor) setConfig(prev => ({ ...prev, ...cfg }));
-    }).catch(() => {}).finally(() => setLoading(false));
+    (async () => {
+      try {
+        const [sub, cfg] = await Promise.all([
+          fetch('/api/user/subscription').then(r => r.json()),
+          fetch('/api/globe/settings').then(r => r.json()),
+        ]);
+        if (sub.slug) {
+          setSlug(sub.slug);
+          const u = await fetch(`/api/users/${sub.slug}`).then(r => r.json()).catch(() => null);
+          if (u?.photos) {
+            setTitle(u.name || '');
+            setPublishedUrl(`${window.location.origin}/u/${sub.slug}`);
+            setExistingImages(u.photos.map((p: any) => ({ id: p.id, url: p.imageUrl })));
+          }
+        }
+        if (cfg && cfg.globeColor) setConfig(prev => ({ ...prev, ...cfg }));
+      } catch {}
+      setLoading(false);
+    })();
   }, []);
 
   // Generate QR code when published URL changes
@@ -194,7 +201,12 @@ export default function DashboardPage() {
     } catch { alert('Terjadi kesalahan.'); setPublishing(false); }
   };
 
-  if (loading) return <main style={{ minHeight: '100vh', background: '#0a0015', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p>Loading...</p></main>;
+  if (loading) return (
+    <main style={{ minHeight: '100vh', background: '#0a0015', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20 }}>
+      <div style={{ width: 60, height: 60, border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', boxShadow: '0 0 30px rgba(255,107,107,0.6)' }} />
+      <div style={{ fontSize: 18, fontWeight: 600, background: 'linear-gradient(135deg, #ff6b6b, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Loading Dashboard...</div>
+    </main>
+  );
 
   return (
     <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0015 0%, #1a0020 50%, #0a0015 100%)', color: '#fff', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>

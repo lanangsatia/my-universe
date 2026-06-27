@@ -24,12 +24,16 @@ export default function Home() {
   const [photos, setPhotos] = useState<string[] | null>(null);
   const [greetingText, setGreetingText] = useState(DEFAULT_GREETING);
   const [questionText, setQuestionText] = useState(DEFAULT_QUESTION);
+  const [dataReady, setDataReady] = useState(false);
 
-  useEffect(() => { const t = setTimeout(() => setIsLoading(false), 3000); return () => clearTimeout(t); }, []);
-
-  // Fetch landing defaults (public) for non-logged-in visitors
+  // Keep loading overlay until ALL data is fetched (or max 5s timeout)
   useEffect(() => {
     let mounted = true;
+    let resolved = 0;
+    const checkDone = () => { if (!mounted) return; resolved++; if (resolved >= 2) { setDataReady(true); setTimeout(() => setIsLoading(false), 500); } };
+    const fallback = setTimeout(() => { if (!mounted) return; setDataReady(true); setIsLoading(false); }, 5000);
+
+    // Fetch landing defaults (public)
     fetch('/api/admin/landing')
       .then(r => r.json())
       .then(data => {
@@ -38,27 +42,25 @@ export default function Home() {
         if (data.greetingText) setGreetingText(data.greetingText);
         if (data.questionText) setQuestionText(data.questionText);
       })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, []);
+      .catch(() => {})
+      .finally(() => { checkDone(); });
 
-  // If logged in & has globe, override with personal data
-  useEffect(() => {
-    if (!isSignedIn) return;
-    let mounted = true;
-    fetch('/api/user/subscription')
-      .then(r => r.ok ? r.json() : null)
-      .then(sub => {
-        if (!mounted || !sub?.slug) return;
-        fetch(`/api/users/${sub.slug}`).then(r => r.json()).then(data => {
-          if (!mounted) return;
-          if (data.photos?.length) setPhotos(data.photos.map((p: any) => p.imageUrl));
-          if (data.config?.greetingText) setGreetingText(data.config.greetingText);
-          if (data.config?.questionText) setQuestionText(data.config.questionText);
-        }).catch(() => {});
-      })
-      .catch(() => {});
-    return () => { mounted = false; };
+    // If logged in & has globe, override with personal data
+    const fetchUserGlobe = async () => {
+      try {
+        const sub = await fetch('/api/user/subscription').then(r => r.ok ? r.json() : null);
+        if (!mounted || !sub?.slug) { checkDone(); return; }
+        const data = await fetch(`/api/users/${sub.slug}`).then(r => r.json());
+        if (!mounted) return;
+        if (data.photos?.length) setPhotos(data.photos.map((p: any) => p.imageUrl));
+        if (data.config?.greetingText) setGreetingText(data.config.greetingText);
+        if (data.config?.questionText) setQuestionText(data.config.questionText);
+      } catch {}
+      if (mounted) checkDone();
+    };
+    if (isSignedIn) fetchUserGlobe(); else checkDone();
+
+    return () => { mounted = false; clearTimeout(fallback); };
   }, [isSignedIn]);
 
   useEffect(() => {
