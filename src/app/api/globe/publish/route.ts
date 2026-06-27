@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
-import { uploadToR2 } from '@/lib/r2';
+import { uploadToR2, r2UrlToProxy } from '@/lib/r2';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,9 +19,6 @@ export async function POST(req: NextRequest) {
     if (!slug) {
       return NextResponse.json({ error: 'Slug is required' }, { status: 400 });
     }
-    if (photos.length === 0) {
-      return NextResponse.json({ error: 'At least one photo is required' }, { status: 400 });
-    }
     if (photos.length > 10) {
       return NextResponse.json({ error: 'Maksimal 10 foto' }, { status: 400 });
     }
@@ -33,6 +30,11 @@ export async function POST(req: NextRequest) {
     }
 
     const isNewUser = !dbUser;
+
+    // New users must upload at least 1 photo
+    if (isNewUser && photos.length === 0) {
+      return NextResponse.json({ error: 'At least one photo is required' }, { status: 400 });
+    }
 
     if (isNewUser) {
       // New user — check slug availability

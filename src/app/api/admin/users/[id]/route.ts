@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
-import { deleteFromR2 } from '@/lib/r2';
+import { deleteFromR2, r2UrlToProxy } from '@/lib/r2';
 
 async function checkAdmin() {
   const session = await auth();
@@ -33,7 +33,7 @@ export async function GET(
     return NextResponse.json({
       name: user.name, slug: user.slug,
       config: user.config || {},
-      photos: user.photos.map(p => ({ id: p.id, url: p.imageUrl })),
+      photos: user.photos.map(p => ({ id: p.id, url: r2UrlToProxy(p.imageUrl) })),
     });
   } catch (error) {
     console.error('Admin get user error:', error);

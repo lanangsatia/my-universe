@@ -33,7 +33,7 @@ interface GlobeConfig {
 export default function UserGlobePage() {
   const params = useParams();
   const slug = params.slug as string;
-  const [user, setUser] = useState<{ name: string; slug: string; photos: { imageUrl: string }[]; config?: GlobeConfig; banned?: boolean } | null>(null);
+  const [user, setUser] = useState<{ name: string; slug: string; photos: { imageUrl: string }[]; config?: GlobeConfig; banned?: boolean; paymentPending?: boolean } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showGreeting, setShowGreeting] = useState(true);
@@ -79,6 +79,21 @@ export default function UserGlobePage() {
           <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Globe Tidak Aktif</h1>
           <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 400 }}>
             Globe ini sedang tidak aktif karena akun pengguna telah dinonaktifkan.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show payment pending notification
+  if (user?.paymentPending) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: "'Segoe UI', sans-serif" }}>
+        <div style={{ textAlign: 'center', padding: 20 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>💳</div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Globe Belum Aktif</h1>
+          <p style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 400 }}>
+            Globe sedang diproses. Silakan selesaikan pembayaran untuk mengaktifkan globe ini.
           </p>
         </div>
       </div>

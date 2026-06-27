@@ -37,6 +37,20 @@ export async function GET(
       } catch {}
     }
 
+    // Check if payment is complete (globe not live until paid)
+    let paymentPending = true;
+    if (user.clerkId) {
+      try {
+        const paidPayment = await prisma.payment.findFirst({
+          where: { 
+            user: { clerkId: user.clerkId },
+            status: 'PAID',
+          },
+        });
+        paymentPending = !paidPayment;
+      } catch {}
+    }
+
     // Convert R2 public URLs to proxy URLs
     const r2PublicBase = process.env.R2_PUBLIC_URL || '';
     const photos = user.photos.map(p => ({
@@ -51,6 +65,7 @@ export async function GET(
       slug: user.slug,
       config: user.config || {},
       banned,
+      paymentPending,
       photos,
     });
   } catch (error) {

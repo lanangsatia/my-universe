@@ -90,3 +90,16 @@ export async function deleteFromR2(key: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Convert an R2 public URL to a proxy URL (/api/r2/{key}).
+ * Fixes SSL certificate issues with direct R2 public URLs.
+ */
+export function r2UrlToProxy(url: string): string {
+  const publicUrlBase = process.env.R2_PUBLIC_URL;
+  if (publicUrlBase && url.startsWith(publicUrlBase)) {
+    const key = url.replace(publicUrlBase + '/', '');
+    return `/api/r2/${key}`;
+  }
+  return url; // Return as-is if not an R2 URL
+}

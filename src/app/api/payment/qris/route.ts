@@ -18,18 +18,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Jumlah tidak valid' }, { status: 400 });
     }
 
+    // Find user to link payment
+    const user = await prisma.user.findUnique({ where: { clerkId: clerkUserId } });
+    if (!user) {
+      return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 });
+    }
+
+    // Check if there's already a PENDING payment for this user
+    const existingPayment = await prisma.payment.findFirst({
+      where: { userId: user.id, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existingPayment) {
+      // Return existing payment with a fresh Snap token so user can still pay
+      const snap = await createSnapTransaction(existingPayment.amount, existingPayment.orderId);
+      return NextResponse.json({
+        reference_id: existingPayment.orderId,
+        token: snap.token,
+        redirect_url: snap.redirect_url,
+        amount: existingPayment.amount,
+        existing: true,
+      });
+    }
+
     const orderId = `GLOBE-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
     // Create Midtrans Snap transaction
     const snap = await createSnapTransaction(amount, orderId);
 
-    // Save payment record
+    // Save payment record with user reference
     await prisma.payment.create({
       data: {
         orderId,
         package: 'globe',
         amount,
         status: 'PENDING',
+        userId: user.id,
       },
     });
 

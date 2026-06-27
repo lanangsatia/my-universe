@@ -72,6 +72,7 @@ export default function DashboardPage() {
     document.body.appendChild(script);
   }, []);
   const [paymentStatus, setPaymentStatus] = useState('');
+  const [pendingPayment, setPendingPayment] = useState(false);
   const [paymentAmount] = useState(29999); // Harga tetap
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function DashboardPage() {
         ]);
         if (sub.slug) {
           setSlug(sub.slug);
+          if (sub.pendingPayment) setPendingPayment(true);
           const u = await fetch(`/api/users/${sub.slug}`).then(r => r.json()).catch(() => null);
           if (u?.photos) {
             setTitle(u.name || '');
@@ -157,10 +159,11 @@ export default function DashboardPage() {
         body: JSON.stringify({ config }),
       });
       if (!cfgRes.ok) { alert('Gagal menyimpan pengaturan'); setPublishing(false); return; }
-      // Publish
+      // Publish: update user with slug (photos already uploaded via upload-photos)
       const formData = new FormData();
       formData.set('title', title || 'My Universe');
       formData.set('slug', slug || `globe-${Date.now()}`);
+      // Include any new photos not yet uploaded
       newPhotos.forEach(p => formData.append('photos', p.file));
       const res = await fetch('/api/globe/publish', { method: 'POST', body: formData });
       const data = await res.json();
@@ -173,6 +176,7 @@ export default function DashboardPage() {
       setNewPhotos([]);
       setShowPayment(false);
       setPaymentStatus('');
+      setPendingPayment(false);
     } catch { alert('Terjadi kesalahan.'); }
     setPublishing(false);
   };
@@ -194,9 +198,33 @@ export default function DashboardPage() {
     // If already published, just republish (no payment)
     if (publishedUrl) { doPublish(); return; }
 
-    // First-time publish — create payment first
+    // Upload photos first (so they're saved even if payment is cancelled)
     setPublishing(true);
     try {
+      const photoFormData = new FormData();
+      photoFormData.set('title', title || 'My Universe');
+      newPhotos.forEach(p => photoFormData.append('photos', p.file));
+      const uploadRes = await fetch('/api/globe/upload-photos', { method: 'POST', body: photoFormData });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) { alert(uploadData.error || 'Gagal upload foto'); setPublishing(false); return; }
+      // Merge uploaded photos into existing images
+      const uploadedPhotos = uploadData.photos.map((p: any) => ({ id: p.id, url: p.imageUrl }));
+      setExistingImages(prev => [...prev, ...uploadedPhotos]);
+      setNewPhotos([]);
+
+      // Update slug & name now (so data is ready, globe locked until payment)
+      try {
+        const slugForm = new FormData();
+        slugForm.set('title', title || 'My Universe');
+        slugForm.set('slug', slug);
+        const pubRes = await fetch('/api/globe/publish', { method: 'POST', body: slugForm });
+        if (pubRes.ok) {
+          const pubData = await pubRes.json();
+          setPublishedUrl(`${window.location.origin}${pubData.url}`);
+        }
+      } catch {}
+
+      // Create payment
       const res = await fetch('/api/payment/qris', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -212,7 +240,11 @@ export default function DashboardPage() {
           .then(setPaymentQr)
           .catch(() => {});
       }
+      if (data.existing) {
+        alert('Kamu masih memiliki pembayaran yang belum dibayar. Silakan selesaikan pembayaran sebelumnya.');
+      }
       setPaymentStatus('PENDING');
+      setPendingPayment(true);
       setShowPayment(true);
       setPublishing(false);
     } catch { alert('Terjadi kesalahan.'); setPublishing(false); }
@@ -236,14 +268,36 @@ export default function DashboardPage() {
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Globe Saya</h1>
 
         {publishedUrl && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', borderRadius: 12, marginBottom: 24, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', borderRadius: 12, marginBottom: 24, background: pendingPayment ? 'rgba(251,191,36,0.1)' : 'rgba(34,197,94,0.1)', border: pendingPayment ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(34,197,94,0.3)' }}>
             {qrCodeDataUrl && <img src={qrCodeDataUrl} alt="QR Code" style={{ width: 80, height: 80, borderRadius: 8, flexShrink: 0 }} />}
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: '#22c55e' }}>✅ Globe sudah diterbitkan</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: pendingPayment ? '#fbbf24' : '#22c55e' }}>{pendingPayment ? '✅ Globe sudah dibuat' : '✅ Globe sudah terbit'}</p>
               <a href={publishedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#a855f7', fontSize: 14, textDecoration: 'underline', wordBreak: 'break-all' }}>{publishedUrl}</a>
-              <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+              <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 <button onClick={() => { navigator.clipboard.writeText(publishedUrl); }} style={{ padding: '4px 10px', fontSize: 12, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', cursor: 'pointer' }}>📋 Salin Link</button>
                 {qrCodeDataUrl && <button onClick={() => { const a = document.createElement('a'); a.href = qrCodeDataUrl; a.download = 'qrcode.png'; a.click(); }} style={{ padding: '4px 10px', fontSize: 12, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', cursor: 'pointer' }}>⬇️ Download QR</button>}
+                {pendingPayment && (
+                  <button onClick={async () => {
+                    // If payment data is lost (page refresh), fetch existing payment
+                    if (!paymentRef && pendingPayment) {
+                      const r = await fetch('/api/payment/qris', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ amount: paymentAmount }),
+                      });
+                      const d = await r.json();
+                      if (r.ok) {
+                        setPaymentRef(d.reference_id);
+                        setPaymentToken(d.token || '');
+                        setPaymentRedirectUrl(d.redirect_url || '');
+                        if (d.redirect_url) {
+                          QRCode.toDataURL(d.redirect_url, { width: 200, margin: 1 }).then(setPaymentQr).catch(() => {});
+                        }
+                      }
+                    }
+                    setShowPayment(true);
+                  }} style={{ padding: '4px 14px', fontSize: 12, background: 'linear-gradient(135deg, #f59e0b, #ef4444)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>💳 Bayar Sekarang</button>
+                )}
               </div>
             </div>
           </div>
