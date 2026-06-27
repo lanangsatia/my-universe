@@ -53,6 +53,26 @@ export async function GET() {
     // Build map of DB users keyed by clerkId
     const dbMap = new Map(dbUsers.filter(u => u.clerkId).map(u => [u.clerkId!, u]));
 
+    // Get all payment statuses for DB users
+    const dbUserIds = dbUsers.map(u => u.id);
+    const payments = await prisma.payment.groupBy({
+      by: ['userId'],
+      where: { userId: { in: dbUserIds } },
+      _max: { createdAt: true },
+    });
+    const paidPayments = await prisma.payment.findMany({
+      where: { userId: { in: dbUserIds }, status: 'PAID' },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    const pendingPayments = await prisma.payment.findMany({
+      where: { userId: { in: dbUserIds }, status: 'PENDING' },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    const paidSet = new Set(paidPayments.map(p => p.userId));
+    const pendingSet = new Set(pendingPayments.map(p => p.userId));
+
     // Merge: include all Clerk users (non-admin) + DB users without clerkId
     const seenIds = new Set<string>();
     const users: any[] = [];
@@ -77,6 +97,7 @@ export async function GET() {
         clerkName: clerk.fullName || clerk.username || clerk.email,
         avatar: clerk.imageUrl,
         lastLogin: clerk.lastSignInAt,
+        paymentStatus: db?.id ? (paidSet.has(db.id) ? 'PAID' : pendingSet.has(db.id) ? 'PENDING' : null) : null,
       });
     }
 

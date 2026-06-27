@@ -18,12 +18,27 @@ export async function GET(req: NextRequest) {
 
     const payments = await prisma.payment.findMany({
       where,
-      include: { user: { select: { name: true, slug: true } } },
+      include: { user: { select: { id: true, name: true, slug: true, clerkId: true } } },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
 
-    return NextResponse.json({ payments });
+    // Enrich with Clerk username
+    const enrichedPayments = await Promise.all(payments.map(async (p) => {
+      let clerkName: string | null = null;
+      if (p.user?.clerkId) {
+        try {
+          const cu = await client.users.getUser(p.user.clerkId);
+          clerkName = cu.username || cu.fullName || null;
+        } catch {}
+      }
+      return {
+        ...p,
+        user: p.user ? { name: p.user.name, slug: p.user.slug, clerkName } : null,
+      };
+    }));
+
+    return NextResponse.json({ payments: enrichedPayments });
   } catch (error) {
     console.error('Payments error:', error);
     return NextResponse.json({ error: 'Failed' }, { status: 500 });

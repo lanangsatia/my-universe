@@ -149,6 +149,7 @@ function UsersTab({ onError }: { onError: (e: string) => void }) {
             <th style={{ padding: '12px 10px', textAlign: 'left', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Slug</th>
             <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Foto</th>
             <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Status</th>
+            <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Payment</th>
             <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Preview</th>
             <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Aksi</th>
           </tr></thead>
@@ -173,6 +174,15 @@ function UsersTab({ onError }: { onError: (e: string) => void }) {
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: u.isActive ? '#22c55e' : '#ef4444', marginRight: 6 }} />
                   <span style={{ color: u.isActive ? '#22c55e' : '#ef4444', fontSize: 12 }}>{u.isActive ? 'Aktif' : 'Diban'}</span>
+                </td>
+                <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                  {u.paymentStatus === 'PAID' ? (
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(34,197,94,0.2)', color: '#22c55e' }}>Lunas</span>
+                  ) : u.paymentStatus === 'PENDING' ? (
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: 'rgba(251,191,36,0.2)', color: '#fbbf24' }}>Pending</span>
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>-</span>
+                  )}
                 </td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                   {u.slug && !u.slug.startsWith('user-') ? (
@@ -335,7 +345,7 @@ function PaymentsTab({ onError }: { onError: (e: string) => void }) {
             {payments.map((p: any) => (
               <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <td style={{ padding: '12px 10px', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{p.orderId}</td>
-                <td style={{ padding: '12px 10px' }}>{p.user?.name || p.user?.slug || '-'}</td>
+                <td style={{ padding: '12px 10px' }}>{p.user?.clerkName || p.user?.name || p.user?.slug || '-'}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 600 }}>Rp {p.amount.toLocaleString('id-ID')}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                   <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, background: p.status==='PAID' ? 'rgba(34,197,94,0.2)' : 'rgba(251,191,36,0.2)', color: p.status==='PAID' ? '#22c55e' : '#fbbf24' }}>{p.status}</span>
