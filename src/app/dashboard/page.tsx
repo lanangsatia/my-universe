@@ -130,11 +130,19 @@ export default function DashboardPage() {
 
   const applyTheme = (key: ThemeKey) => { const t = THEMES[key]; setConfig(prev => ({ ...prev, ...t })); };
 
-  const saveConfig = async () => {
+  const handleSave = async () => {
     setSavingConfig(true);
     try {
-      const res = await fetch('/api/globe/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) });
-      if (!res.ok) { alert('Gagal menyimpan pengaturan'); }
+      const res = await fetch('/api/globe/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config }),
+      });
+      if (!res.ok) { alert('Gagal menyimpan pengaturan'); setSavingConfig(false); return; }
+      // If already published, also update photos/publish
+      if (publishedUrl && newPhotos.length > 0) {
+        await doPublish();
+      }
     } catch { alert('Terjadi kesalahan saat menyimpan'); }
     setSavingConfig(false);
   };
@@ -142,6 +150,14 @@ export default function DashboardPage() {
   const doPublish = async () => {
     setPublishing(true);
     try {
+      // Save config first
+      const cfgRes = await fetch('/api/globe/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config }),
+      });
+      if (!cfgRes.ok) { alert('Gagal menyimpan pengaturan'); setPublishing(false); return; }
+      // Publish
       const formData = new FormData();
       formData.set('title', title || 'My Universe');
       formData.set('slug', slug || `globe-${Date.now()}`);
@@ -156,15 +172,29 @@ export default function DashboardPage() {
       }
       setNewPhotos([]);
       setShowPayment(false);
+      setPaymentStatus('');
     } catch { alert('Terjadi kesalahan.'); }
     setPublishing(false);
   };
 
   const handlePublish = async () => {
     if (newPhotos.length === 0) { alert('Pilih minimal 1 foto.'); return; }
-    // Skip payment if bypass param or already published
+    if (!slug) { alert('Isi slug globe terlebih dahulu.'); return; }
+
+    // Save config settings first (before anything)
+    try {
+      const cfgRes = await fetch('/api/globe/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config }),
+      });
+      if (!cfgRes.ok) { alert('Gagal menyimpan pengaturan'); return; }
+    } catch { alert('Gagal menyimpan pengaturan'); return; }
+
+    // If already published, just republish (no payment)
     if (publishedUrl) { doPublish(); return; }
-    // Create QRIS payment
+
+    // First-time publish — create payment first
     setPublishing(true);
     try {
       const res = await fetch('/api/payment/qris', {
@@ -177,7 +207,6 @@ export default function DashboardPage() {
       setPaymentRef(data.reference_id);
       setPaymentToken(data.token || '');
       setPaymentRedirectUrl(data.redirect_url || '');
-      // Generate QR dari redirect_url
       if (data.redirect_url) {
         QRCode.toDataURL(data.redirect_url, { width: 200, margin: 1 })
           .then(setPaymentQr)
@@ -186,24 +215,6 @@ export default function DashboardPage() {
       setPaymentStatus('PENDING');
       setShowPayment(true);
       setPublishing(false);
-
-      // Poll payment status
-      const poll = setInterval(async () => {
-        try {
-          const r = await fetch(`/api/payment/status/${data.reference_id}`);
-          if (!r.ok) return;
-          const d = await r.json();
-          if (d.status === 'PAID') {
-            clearInterval(poll);
-            setPaymentStatus('PAID');
-            alert('✅ Pembayaran berhasil! Globe sedang diterbitkan...');
-            doPublish();
-          }
-        } catch { /* ignore poll errors */ }
-      }, 3000);
-
-      // Timeout after 5 minutes
-      setTimeout(() => clearInterval(poll), 300000);
     } catch { alert('Terjadi kesalahan.'); setPublishing(false); }
   };
 
@@ -264,7 +275,11 @@ export default function DashboardPage() {
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Judul Globe" style={{ flex: 1, padding: '10px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>/u/</span><input type="text" value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="slug" style={{ width: 120, padding: '10px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, outline: 'none' }} disabled={!!publishedUrl} /></div>
           </div>
-          <button onClick={handlePublish} disabled={newPhotos.length === 0 || publishing} style={{ marginTop: 12, width: '100%', padding: '14px 0', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: newPhotos.length === 0 || publishing ? 'not-allowed' : 'pointer', background: newPhotos.length === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', opacity: newPhotos.length === 0 ? 0.5 : 1 }}>{publishing ? 'Menyimpan...' : publishedUrl ? 'Simpan Perubahan ✨' : 'Terbitkan Globe ✨'}</button>
+          {publishedUrl ? (
+            <button onClick={handleSave} disabled={savingConfig} style={{ marginTop: 12, width: '100%', padding: '14px 0', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: savingConfig ? 'not-allowed' : 'pointer', background: 'rgba(255,255,255,0.05)', color: '#fff', opacity: savingConfig ? 0.5 : 1 }}>{savingConfig ? 'Menyimpan...' : '💾 Simpan'}</button>
+          ) : (
+            <button onClick={handlePublish} disabled={newPhotos.length === 0 || publishing} style={{ marginTop: 12, width: '100%', padding: '14px 0', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: newPhotos.length === 0 || publishing ? 'not-allowed' : 'pointer', background: newPhotos.length === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', opacity: newPhotos.length === 0 ? 0.5 : 1 }}>{publishing ? 'Memproses...' : '✨ Terbitkan'}</button>
+          )}
         </section>
 
         {/* QRIS PAYMENT MODAL */}
@@ -286,8 +301,8 @@ export default function DashboardPage() {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ order_id: paymentRef }),
                       });
-                      setPaymentStatus('PAID');
                       payingRef.current = false;
+                      doPublish();
                     },
                     onPending: () => { payingRef.current = false; },
                     onError: () => { payingRef.current = false; alert('Pembayaran gagal, coba lagi.'); },
@@ -301,7 +316,7 @@ export default function DashboardPage() {
               )}
             
               {paymentStatus === 'PAID' ? (
-                <div style={{ padding: '12px 0', color: '#22c55e', fontSize: 15, fontWeight: 600 }}>✅ Pembayaran berhasil! Menerbitkan globe...</div>
+                <div style={{ padding: '12px 0', color: '#22c55e', fontSize: 15, fontWeight: 600 }}>✅ Menerbitkan globe...</div>
               ) : process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true' ? (
                 <button onClick={() => { setShowPayment(false); }} style={{ width: '100%', padding: '14px 32px', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Tutup</button>
               ) : (
@@ -313,7 +328,7 @@ export default function DashboardPage() {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ order_id: paymentRef }),
                     });
-                    setPaymentStatus('PAID');
+                    doPublish();
                   }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Simulasi Bayar ✅</button>
                 </div>
               )}
@@ -373,7 +388,6 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <button onClick={saveConfig} disabled={savingConfig} style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: savingConfig ? 'not-allowed' : 'pointer', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', marginBottom: 24 }}>{savingConfig ? 'Menyimpan...' : 'Simpan Pengaturan ✨'}</button>
       </div>
     </main>
   );

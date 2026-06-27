@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 
 export async function PUT(req: NextRequest) {
@@ -17,7 +17,21 @@ export async function PUT(req: NextRequest) {
     if (!dbUser) {
       dbUser = await prisma.user.findUnique({ where: { email: `${clerkUserId}@clerk` } });
     }
-    if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!dbUser) {
+      // Auto-create user if they don't exist yet (pre-publish config save)
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(clerkUserId);
+      const email = clerkUser.emailAddresses?.[0]?.emailAddress || `${clerkUserId}@clerk`;
+      const name = clerkUser.fullName || clerkUser.username || email.split('@')[0];
+      dbUser = await prisma.user.create({
+        data: {
+          clerkId: clerkUserId, email, name,
+          slug: `user-${clerkUserId.slice(-8)}`,
+          package: 'free', maxPhotos: 5, config,
+        },
+      });
+      return NextResponse.json({ success: true });
+    }
 
     await prisma.user.update({
       where: { id: dbUser.id },
