@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flow Transaksi - My Universe</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #f8fafc;
+    color: #0f172a;
+    padding: 0;
+  }
+  .cover {
+    background: linear-gradient(135deg, #0a0015 0%, #1a0020 50%, #0a0015 100%);
+    color: #fff;
+    padding: 80px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
+                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent);
+    background-size: 200px 200px;
+  }
+  .cover h1 { font-size: 42px; font-weight: 800; position: relative; z-index: 1; }
+  .cover h1 span { background: linear-gradient(135deg, #ff6b6b, #a855f7); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+  .cover p { font-size: 18px; color: rgba(255,255,255,0.6); margin-top: 12px; position: relative; z-index: 1; }
+  .badge { display: inline-block; background: rgba(255,107,107,0.2); color: #ff6b6b; padding: 4px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+  .step {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 32px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+    page-break-inside: avoid;
+  }
+  .step-number {
+    display: inline-flex;
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #a855f7, #ff6b6b);
+    color: #fff;
+    border-radius: 50%;
+    align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px;
+    margin-right: 12px;
+  }
+  .step-header {
+    display: flex; align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f1f5f9;
+  }
+  .step-header h2 { font-size: 22px; font-weight: 700; }
+  .step-content { line-height: 1.8; color: #334155; font-size: 15px; }
+  .step-content p { margin-bottom: 12px; }
+  .step-content ul { margin: 8px 0 16px 20px; }
+  .step-content li { margin-bottom: 6px; }
+  .mockup {
+    background: #0a0015;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.1);
+    overflow: hidden;
+  }
+  .mockup-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .mockup-title { font-weight: 600; font-size: 14px; }
+  .mockup-body { font-size: 13px; color: rgba(255,255,255,0.8); }
+  .btn-mock {
+    display: inline-block; padding: 10px 24px;
+    border-radius: 10px; font-weight: 600; font-size: 14px;
+    border: none; cursor: pointer; margin: 4px;
+  }
+  .btn-primary { background: linear-gradient(135deg, #a855f7, #ff6b6b); color: #fff; }
+  .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+  .btn-full { width: 100%; text-align: center; display: block; padding: 14px 0; }
+  .diagram { background: #f1f5f9; border-radius: 12px; padding: 24px; margin: 20px 0; text-align: center; }
+  .diagram svg { max-width: 100%; height: auto; }
+  .info-box { background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px 20px; border-radius: 8px; margin: 16px 0; font-size: 14px; }
+  .info-box strong { color: #1e40af; }
+  .footer { text-align: center; padding: 40px; color: #94a3b8; font-size: 13px; border-top: 1px solid #e2e8f0; }
+  @media print { .step { break-inside: avoid; } body { background: #fff; } .cover { padding: 40px 20px; } .cover h1 { font-size: 28px; } }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f8fafc; font-weight: 600; color: #475569; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+  .tag-green { background: #dcfce7; color: #166534; }
+  .tag-purple { background: #f3e8ff; color: #6b21a8; }
+  .tag-blue { background: #dbeafe; color: #1e40af; }
+  .tag-yellow { background: #fef3c7; color: #92400e; }
+  .tag-red { background: #fee2e2; color: #991b1b; }
+  .flow-row { display: flex; gap: 0; align-items: center; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+  .flow-item { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 16px; min-width: 80px; }
+  .flow-dot { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: #fff; }
+  .flow-arrow { font-size: 20px; color: #94a3b8; }
+  .dot-login { background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+  .dot-dash { background: linear-gradient(135deg, #a855f7, #ff6b6b); }
+  .dot-upload { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+  .dot-pay { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+  .dot-live { background: linear-gradient(135deg, #22c55e, #10b981); }
+  .dot-share { background: linear-gradient(135deg, #a855f7, #ec4899); }
+  .flow-label { font-size: 11px; font-weight: 600; color: #475569; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="badge">📄 Dokumentasi Flow Transaksi</div>
+  <h1>❤ <span>My Universe</span></h1>
+  <p>Flow Transaksi Pembuatan Globe Interaktif 3D<br>Login → Upload → Pembayaran Midtrans → Globe Live!</p>
+  <p style="margin-top:30px; font-size:14px; color:rgba(255,255,255,0.4);">Versi 1.0 — 27 Juni 2026</p>
+</div>
+
+<div class="container">
+
+  <!-- OVERVIEW -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">📋</span>
+      <h2>Gambaran Umum Flow</h2>
+    </div>
+    <div class="step-content">
+      <p>Berikut adalah alur transaksi pengguna dari awal hingga globe diterbitkan:</p>
+
+      <div class="flow-row">
+        <div class="flow-item"><div class="flow-dot dot-login">1</div><span class="flow-label">Login/<br>Registrasi</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-item"><div class="flow-dot dot-dash">2</div><span class="flow-label">Dashboard<br>Buat Globe</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-item"><div class="flow-dot dot-upload">3</div><span class="flow-label">Upload Foto<br>&amp; Kustomisasi</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-item"><div class="flow-dot dot-pay">4</div><span class="flow-label">Terbitkan<br>&amp; Bayar</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-item"><div class="flow-dot dot-live">5</div><span class="flow-label">Globe<br>Live!</span></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-item"><div class="flow-dot dot-share">6</div><span class="flow-label">Bagikan<br>Link</span></div>
+      </div>
+
+      <table>
+        <tr><th>#</th><th>Step</th><th>Halaman</th><th>Deskripsi</th></tr>
+        <tr><td>1</td><td>Login / Registrasi</td><td><span class="tag tag-blue">/sign-in</span> <span class="tag tag-blue">/sign-up</span></td><td>Autentikasi via Clerk (email/password atau Google)</td></tr>
+        <tr><td>2</td><td>Dashboard — Buat Globe</td><td><span class="tag tag-purple">/dashboard</span></td><td>Masuk ke halaman dashboard untuk membuat globe</td></tr>
+        <tr><td>3</td><td>Upload Foto &amp; Kustomisasi</td><td><span class="tag tag-purple">/dashboard</span></td><td>Upload foto (max 10), pilih tema warna, atur teks &amp; kecepatan</td></tr>
+        <tr><td>4</td><td>Terbitkan &amp; Pembayaran</td><td><span class="tag tag-yellow">Modal Midtrans</span></td><td>Klik "Terbitkan Globe ✨" → bayar via Midtrans Snap</td></tr>
+        <tr><td>5</td><td>Globe Live!</td><td><span class="tag tag-green">/u/[slug]</span></td><td>Globe 3D live dengan foto dan konfigurasi</td></tr>
+        <tr><td>6</td><td>Bagikan</td><td><span class="tag tag-purple">/u/[slug]</span></td><td>Bagikan link unik ke orang spesial + QR code</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 1: Login -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">1</span>
+      <h2>Login / Registrasi</h2>
+    </div>
+    <div class="step-content">
+      <p>Pengguna memulai dengan login atau mendaftar akun melalui halaman <strong>/sign-in</strong> atau <strong>/sign-up</strong>.</p>
+
+      <div class="mockup">
+        <div class="mockup-header">
+          <span class="mockup-title">❤ My Universe — Masuk</span>
+          <span style="font-size:11px; color:rgba(255,255,255,0.3);">/sign-in</span>
+        </div>
+        <div class="mockup-body" style="text-align:center; padding:20px 0;">
+          <div style="display:inline-block; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:24px; min-width:280px;">
+            <div style="font-size:32px; margin-bottom:8px;">🔐</div>
+            <p style="font-weight:600; margin-bottom:16px;">Masuk ke My Universe</p>
+            <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px; margin-bottom:8px; text-align:left; color:rgba(255,255,255,0.4);">✉️ Email</div>
+            <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px; margin-bottom:12px; text-align:left; color:rgba(255,255,255,0.4);">🔒 Password</div>
+            <div class="btn-mock btn-primary btn-full" style="text-align:center; cursor:default;">Masuk</div>
+            <p style="font-size:12px; color:rgba(255,255,255,0.3); margin-top:12px;">atau lanjutkan dengan</p>
+            <div style="display:flex; justify-content:center; gap:8px; margin-top:8px;">
+              <span style="background:rgba(255,255,255,0.05); padding:8px 14px; border-radius:8px; font-size:12px;">🔵 Google</span>
+            </div>
+            <p style="font-size:12px; color:rgba(255,255,255,0.3); margin-top:12px;">Belum punya akun? <span style="color:#a855f7;">Daftar</span></p>
+          </div>
+        </div>
+      </div>
+
+      <p>Metode autentikasi yang tersedia:</p>
+      <ul>
+        <li><strong>Email &amp; Password</strong> — Registrasi standar dengan verifikasi email</li>
+        <li><strong>Google OAuth</strong> — Login cepat dengan akun Google</li>
+      </ul>
+
+      <div class="info-box">
+        <strong>🔐 Auth:</strong> Menggunakan <strong>Clerk</strong> — session aman, proteksi middleware otomatis. Setelah login sukses, pengguna diarahkan ke <strong>/dashboard</strong>.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Dashboard -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">2</span>
+      <h2>Dashboard — Buat Globe</h2>
+    </div>
+    <div class="step-content">
+      <p>Setelah login, pengguna masuk ke halaman <strong>/dashboard</strong>. Inilah pusat kendali pembuatan globe.</p>
+
+      <div class="mockup">
+        <div class="mockup-header">
+          <span class="mockup-title">❤ My Universe — Globe Saya</span>
+          <span style="font-size:11px; color:rgba(255,255,255,0.3);">/dashboard</span>
+        </div>
+        <div class="mockup-body">
+          <p style="font-size:18px; font-weight:700; margin-bottom:4px;">Globe Saya</p>
+          <p style="font-size:12px; color:rgba(255,255,255,0.4); margin-bottom:12px;">Dashboard untuk membuat dan mengelola globe kamu</p>
+
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+            <span style="padding:6px 14px; background:rgba(168,85,247,0.2); border:1px solid rgba(168,85,247,0.4); border-radius:8px; font-size:11px;">📸 Upload Foto</span>
+            <span style="padding:6px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; font-size:11px;">🎨 Pilih Tema</span>
+            <span style="padding:6px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; font-size:11px;">✏️ Atur Teks</span>
+            <span style="padding:6px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; font-size:11px;">⚡ Kecepatan</span>
+            <span style="padding:6px 14px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; font-size:11px;">🌠 Meteor</span>
+          </div>
+
+          <div class="btn-mock btn-primary btn-full" style="text-align:center; cursor:default;">Terbitkan Globe ✨</div>
+        </div>
+      </div>
+
+      <p>Fitur yang tersedia di dashboard:</p>
+      <ul>
+        <li><strong>Upload Foto</strong> — Klik area upload, pilih foto kenangan (max 10 foto)</li>
+        <li><strong>Preview Thumbnail</strong> — Foto yang sudah diupload tampil sebagai thumbnail, bisa dihapus</li>
+        <li><strong>Judul &amp; Slug</strong> — Atur judul globe dan URL unik (contoh: <code>/u/pasutri-ayang</code>)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- STEP 3: Upload & Customize -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">3</span>
+      <h2>Upload Foto &amp; Kustomisasi</h2>
+    </div>
+    <div class="step-content">
+      <p>Pengguna mengupload foto-foto kenangan dan melakukan kustomisasi tampilan globe.</p>
+
+      <h3 style="margin:16px 0 8px;">📸 Upload Foto</h3>
+      <div class="mockup">
+        <div class="mockup-header">
+          <span class="mockup-title">📸 Foto (3/10)</span>
+        </div>
+        <div class="mockup-body">
+          <div style="border:2px dashed rgba(255,255,255,0.2); border-radius:12px; padding:20px; text-align:center; cursor:pointer; margin-bottom:8px;">
+            <div style="font-size:24px; margin-bottom:4px;">📸</div>
+            <p style="color:rgba(255,255,255,0.4); font-size:12px;">Klik untuk upload foto</p>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <div style="width:72px; height:72px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; position:relative;">
+              <div style="width:100%;height:100%;background:linear-gradient(45deg,#ff6b6b,#a855f7);"></div>
+              <span style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(255,0,0,0.7);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;">✕</span>
+            </div>
+            <div style="width:72px; height:72px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; position:relative;">
+              <div style="width:100%;height:100%;background:linear-gradient(45deg,#3b82f6,#06b6d4);"></div>
+              <span style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(255,0,0,0.7);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;">✕</span>
+            </div>
+            <div style="width:72px; height:72px; background:rgba(255,255,255,0.05); border-radius:8px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; position:relative;">
+              <div style="width:100%;height:100%;background:linear-gradient(45deg,#22c55e,#10b981);"></div>
+              <span style="position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(255,0,0,0.7);border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;">✕</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <div style="flex:1; padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; font-size:12px; color:rgba(255,255,255,0.4);">Judul Globe</div>
+            <div style="display:flex; align-items:center; gap:2px;"><span style="font-size:11px; color:rgba(255,255,255,0.3);">/u/</span><div style="padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; font-size:12px; color:rgba(255,255,255,0.4); width:100px;">slug</div></div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin:16px 0 8px;">🎨 9 Tema Warna</h3>
+      <div class="mockup">
+        <div class="mockup-body">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#a855f7; margin-right:4px;"></span> Purple Pink</span>
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#ff6b6b; margin-right:4px;"></span> Rose Teal</span>
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#00c3ff; margin-right:4px;"></span> Ocean Mint</span>
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#ffd200; margin-right:4px;"></span> Sunset</span>
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#11998e; margin-right:4px;"></span> Emerald</span>
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#03045e; margin-right:4px;"></span> Midnight</span>
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#9b2226; margin-right:4px;"></span> Lava</span>
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#2d6a4f; margin-right:4px;"></span> Magic Forest</span>
+            <span style="padding:8px 12px; border-radius:8px; font-size:11px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#ffafcc; margin-right:4px;"></span> Soft Pastel</span>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin:16px 0 8px;">✏️ Teks Tampilan</h3>
+      <div class="mockup">
+        <div class="mockup-body">
+          <div style="margin-bottom:6px;"><span style="font-size:11px; color:rgba(255,255,255,0.4);">Sapaan Awal</span><div style="padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; margin-top:2px; font-size:13px; color:rgba(255,255,255,0.6);">Hi, sayang! 😘</div></div>
+          <div><span style="font-size:11px; color:rgba(255,255,255,0.4);">Pertanyaan</span><div style="padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:8px; margin-top:2px; font-size:13px; color:rgba(255,255,255,0.6);">Do you want to see our moments?</div></div>
+        </div>
+      </div>
+
+      <h3 style="margin:16px 0 8px;">⚡ Kecepatan &amp; Efek</h3>
+      <ul>
+        <li><strong>Putaran Globe</strong> — Slider kecepatan rotasi (0.0001 ~ 0.01)</li>
+        <li><strong>Partikel</strong> — Slider kecepatan partikel galaksi (0.1 ~ 10)</li>
+        <li><strong>🌠 Hujan Meteor</strong> — Toggle nyala/mati, atur warna (color picker) dan kecepatan (1 ~ 30)</li>
+      </ul>
+
+      <div class="info-box">
+        <strong>💾 Simpan:</strong> Klik "Simpan Pengaturan ✨" untuk menyimpan konfigurasi via <code>PUT /api/globe/settings</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Publish & Payment -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">4</span>
+      <h2>Terbitkan Globe &amp; Pembayaran Midtrans</h2>
+    </div>
+    <div class="step-content">
+      <p>Setelah puas dengan foto dan pengaturan, klik tombol <strong>"Terbitkan Globe ✨"</strong>.</p>
+
+      <h3 style="margin:16px 0 8px;">💳 Muncul Modal Pembayaran</h3>
+      <div class="mockup">
+        <div class="mockup-header">
+          <span class="mockup-title">💳 Bayar untuk Terbitkan</span>
+        </div>
+        <div class="mockup-body" style="text-align:center; padding:12px 0;">
+          <div style="font-size:32px; margin-bottom:8px;">💳</div>
+          <p style="font-weight:600;">Bayar untuk Terbitkan</p>
+          <p style="font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:12px;">Klik tombol di bawah untuk membayar via QRIS/GoPay/OVO/Bank Transfer</p>
+          <div style="font-size:28px; font-weight:700; background:linear-gradient(135deg,#a855f7,#ff6b6b); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; margin-bottom:16px;">Rp 29.999</div>
+          <div class="btn-mock btn-primary" style="padding:14px 32px; cursor:default;">💳 Bayar Sekarang</div>
+          <p style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px;">🔒 Pembayaran diproses oleh Midtrans</p>
+        </div>
+      </div>
+
+      <h3 style="margin:16px 0 8px;">Alur Pembayaran Lengkap</h3>
+      <ol>
+        <li>Klik <strong>"Terbitkan Globe ✨"</strong> → sistem panggil <code>POST /api/payment/qris</code></li>
+        <li>Midtrans Snap transaction dibuat → payment record <span class="tag tag-yellow">PENDING</span></li>
+        <li>Muncul modal <strong>"Bayar untuk Terbitkan"</strong> dengan total Rp 29.999</li>
+        <li>Klik <strong>"💳 Bayar Sekarang"</strong> → popup Snap dari Midtrans muncul</li>
+      </ol>
+
+      <h4 style="margin:12px 0;">Metode Pembayaran yang Didukung (Midtrans Snap)</h4>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;">
+        <span class="tag tag-purple">QRIS</span>
+        <span class="tag tag-blue">GoPay</span>
+        <span class="tag tag-green">OVO</span>
+        <span class="tag tag-yellow">Bank Transfer</span>
+        <span class="tag tag-red"> lainnya</span>
+      </div>
+
+      <h4 style="margin:12px 0;">🔄 Polling Status</h4>
+      <p>Setelah membayar, frontend secara otomatis:</p>
+      <ul>
+        <li>Memanggil <code>GET /api/payment/status/[orderId]</code> setiap <strong>3 detik</strong></li>
+        <li>Jika status berubah <span class="tag tag-green">PAID</span> → otomatis lanjut ke proses publish</li>
+        <li>Timeout setelah <strong>5 menit</strong></li>
+      </ul>
+
+      <h4 style="margin:12px 0;">🔄 Webhook Midtrans</h4>
+      <p>Midtrans juga mengirim notifikasi ke server via <code>POST /api/payment/webhook</code>:</p>
+      <ul>
+        <li><strong>transaction_status = settlement</strong> atau <strong>capture</strong> → status diupdate ke <span class="tag tag-green">PAID</span></li>
+        <li>Redirect callback: <code>/payment/[orderId]?status=success|failed|pending</code></li>
+      </ul>
+
+      <div class="info-box">
+        <strong>🧪 Mode Sandbox:</strong> Jika <code>MIDTRANS_IS_PRODUCTION=false</code>, tombol <strong>"Simulasi Bayar ✅"</strong> muncul untuk testing tanpa bayar sungguhan. Klik → langsung mark PAID.
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: Globe Live -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">5</span>
+      <h2>Globe Live!</h2>
+    </div>
+    <div class="step-content">
+      <p>Setelah pembayaran sukses, sistem otomatis memanggil <code>POST /api/globe/publish</code>:</p>
+      <ul>
+        <li>Foto diupload ke <strong>Cloudflare R2</strong> (atau local fallback)</li>
+        <li>Data user, foto, dan konfigurasi disimpan ke <strong>PostgreSQL via Prisma</strong></li>
+        <li>Globe langsung live di link unik: <code>/u/[slug]</code></li>
+      </ul>
+
+      <div class="mockup" style="text-align:center;">
+        <div class="mockup-body">
+          <div style="display:flex; align-items:center; gap:12px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:12px; margin-bottom:16px;">
+            <div style="width:60px; height:60px; background:#000; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:10px; color:rgba(255,255,255,0.3); border:1px solid rgba(255,255,255,0.1);">QR</div>
+            <div style="flex:1; text-align:left;">
+              <p style="font-size:13px; font-weight:600; color:#22c55e;">✅ Globe sudah diterbitkan</p>
+              <p style="font-size:12px; color:#a855f7; word-break:break-all;">https://domain.com/u/pasutri-ayang</p>
+              <div style="display:flex; gap:4px; margin-top:6px;">
+                <span style="padding:3px 8px; font-size:10px; background:rgba(255,255,255,0.1); border-radius:4px; cursor:default;">📋 Salin Link</span>
+                <span style="padding:3px 8px; font-size:10px; background:rgba(255,255,255,0.1); border-radius:4px; cursor:default;">⬇️ Download QR</span>
+              </div>
+            </div>
+          </div>
+
+          <p style="font-weight:600; margin-bottom:4px;">🎬 Yang Terjadi Saat Link Dibuka</p>
+          <p style="font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:12px;">Orang spesial membuka link globe kamu</p>
+
+          <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:20px;">
+            <p style="font-size:24px;">🌍</p>
+            <p style="font-size:14px; font-weight:600;">Hi, sayang! 😘</p>
+            <p style="font-size:13px; color:rgba(255,255,255,0.6);">Do you want to see our moments?</p>
+            <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
+              <span style="padding:8px 20px; background:linear-gradient(135deg,#ff6b6b,#ee5a24); border-radius:20px; font-size:13px; cursor:default;">Of course 😍</span>
+              <span style="padding:8px 20px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.3); border-radius:20px; font-size:13px; cursor:default;">No way 🙂‍↔️</span>
+            </div>
+          </div>
+
+          <p style="font-size:11px; color:rgba(255,255,255,0.3); margin-top:12px;">✨ pasutri-ayang's Universe · Powered by My Universe</p>
+        </div>
+      </div>
+
+      <h3 style="margin:16px 0 8px;">🎬 Animasi 3D Saat "Of course 😍" Diklik</h3>
+      <ol>
+        <li>Overlay greeting menghilang (fade out)</li>
+        <li>Audio <strong>skyfullofstars.mp3</strong> mulai diputar</li>
+        <li><strong>GSAP 3-stage camera animation:</strong>
+          <ul>
+            <li>Stage 1 — Zoom in ke globe (3 detik)</li>
+            <li>Stage 2 — Pull back (2 detik)</li>
+            <li>Stage 3 — Orbit mengelilingi globe (5 detik)</li>
+          </ul>
+        </li>
+        <li>200.000+ partikel galaksi hidup, bloom glow, meteor shower (jika diaktifkan)</li>
+        <li>Foto-foto terlihat mengorbit di ring sekitar globe</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- STEP 6: Share -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">6</span>
+      <h2>Bagikan Link</h2>
+    </div>
+    <div class="step-content">
+      <p>Setelah globe live, pengguna bisa membagikannya dengan berbagai cara:</p>
+
+      <ul>
+        <li><strong>📋 Copy Link</strong> — Klik "Salin Link" untuk menyalin URL globe ke clipboard</li>
+        <li><strong>⬇️ Download QR</strong> — Download QR code untuk dicetak atau dikirim lewat media sosial</li>
+        <li><strong>🔗 Share Langsung</strong> — Bagikan link <code>https://domain.com/u/[slug]</code> ke siapa saja</li>
+      </ul>
+
+      <div class="mockup" style="text-align:center; max-width:400px; margin:16px auto;">
+        <div class="mockup-body">
+          <div style="font-size:32px; margin-bottom:8px;">📤</div>
+          <p style="font-weight:600; margin-bottom:4px;">Bagikan Globe Kamu</p>
+          <p style="font-size:12px; color:rgba(255,255,255,0.5); margin-bottom:12px;">Kirim link ini ke orang spesial</p>
+          <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:16px; margin-bottom:12px;">
+            <p style="font-size:14px; color:#a855f7; word-break:break-all;">https://myuniverse.com/u/pasutri-ayang</p>
+            <div style="display:flex; gap:6px; justify-content:center; margin-top:8px;">
+              <span class="btn-mock btn-primary" style="padding:6px 16px; font-size:12px; cursor:default;">📋 Salin</span>
+              <span class="btn-mock btn-secondary" style="padding:6px 16px; font-size:12px; cursor:default;">⬇️ QR</span>
+            </div>
+          </div>
+          <p style="font-size:11px; color:rgba(255,255,255,0.3);">Siapa pun yang membuka link akan melihat globe 3D kamu ✨</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">⚙️</span>
+      <h2>Detail Teknis API</h2>
+    </div>
+    <div class="step-content">
+      <p>Endpoint API yang terlibat dalam flow transaksi:</p>
+
+      <h3 style="margin:16px 0 8px;">1. Create Midtrans Transaction</h3>
+      <table>
+        <tr><th>Endpoint</th><td colspan="3"><code>POST /api/payment/qris</code></td></tr>
+        <tr><th>Auth</th><td colspan="3">✅ Required (Clerk session)</td></tr>
+        <tr><th>Body</th><td colspan="3"><code>{ "amount": 29999 }</code></td></tr>
+        <tr><th>Response</th><td colspan="3"><code>{ "reference_id": "GLOBE-...", "token": "...", "redirect_url": "..." }</code></td></tr>
+        <tr><th>Fungsi</th><td colspan="3">Buat transaksi Midtrans Snap, simpan payment record PENDING</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;">2. Check Payment Status</h3>
+      <table>
+        <tr><th>Endpoint</th><td colspan="3"><code>GET /api/payment/status/[orderId]</code></td></tr>
+        <tr><th>Response</th><td colspan="3"><code>{ "status": "PENDING" | "PAID" }</code></td></tr>
+        <tr><th>Fungsi</th><td colspan="3">Cek status pembayaran dari database (polling tiap 3 detik)</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;">3. Simulasi Bayar (Sandbox)</h3>
+      <table>
+        <tr><th>Endpoint</th><td colspan="3"><code>POST /api/payment/simulate</code></td></tr>
+        <tr><th>Body</th><td colspan="3"><code>{ "order_id": "GLOBE-..." }</code></td></tr>
+        <tr><th>Fungsi</th><td colspan="3">Mark payment sebagai PAID (hanya development/sandbox)</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;">4. Publish Globe</h3>
+      <table>
+        <tr><th>Endpoint</th><td colspan="3"><code>POST /api/globe/publish</code></td></tr>
+        <tr><th>Auth</th><td colspan="3">✅ Required (Clerk session)</td></tr>
+        <tr><th>Body</th><td colspan="3"><code>FormData</code> — title, slug, photos (File[])</td></tr>
+        <tr><th>Fungsi</th><td colspan="3">Upload foto ke R2, create/update user, return URL globe</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;">5. Webhook Midtrans</h3>
+      <table>
+        <tr><th>Endpoint</th><td colspan="3"><code>POST /api/payment/webhook</code></td></tr>
+        <tr><th>Fungsi</th><td colspan="3">Terima notifikasi Midtrans. settlement/capture → PAID</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;">6. Save Settings</h3>
+      <table>
+        <tr><th>Endpoint</th><td colspan="3"><code>PUT /api/globe/settings</code></td></tr>
+        <tr><th>Body</th><td colspan="3"><code>{ "config": { ... } }</code></td></tr>
+        <tr><th>Fungsi</th><td colspan="3">Simpan konfigurasi globe (tema, teks, kecepatan, meteor)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Database -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">🗄️</span>
+      <h2>Struktur Database</h2>
+    </div>
+    <div class="step-content">
+      <p>Flow transaksi melibatkan 3 model database (PostgreSQL + Prisma):</p>
+
+      <h3 style="margin:16px 0 8px;">User <span style="font-weight:400;font-size:13px;color:#64748b;">(table: users)</span></h3>
+      <table>
+        <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+        <tr><td>id</td><td>UUID</td><td>Primary key</td></tr>
+        <tr><td>clerkId</td><td>String?</td><td>Clerk user ID (unique)</td></tr>
+        <tr><td>slug</td><td>String</td><td>URL slug (unique)</td></tr>
+        <tr><td>package</td><td>String</td><td>"free" | "basic" | "premium"</td></tr>
+        <tr><td>maxPhotos</td><td>Int</td><td>Max foto (default 5)</td></tr>
+        <tr><td>config</td><td>Json</td><td>Theme, text, speed settings</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;">Payment <span style="font-weight:400;font-size:13px;color:#64748b;">(table: payments)</span></h3>
+      <table>
+        <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+        <tr><td>orderId</td><td>String</td><td>Order ID Midtrans (unique)</td></tr>
+        <tr><td>amount</td><td>Int</td><td>Rp 29.999</td></tr>
+        <tr><td>status</td><td>String</td><td>"PENDING" → "PAID"</td></tr>
+        <tr><td>paidAt</td><td>DateTime?</td><td>Waktu pembayaran sukses</td></tr>
+      </table>
+
+      <h3 style="margin:16px 0 8px;">Photo <span style="font-weight:400;font-size:13px;color:#64748b;">(table: photos)</span></h3>
+      <table>
+        <tr><th>Field</th><th>Tipe</th><th>Deskripsi</th></tr>
+        <tr><td>imageUrl</td><td>Text</td><td>URL foto (R2 atau local fallback)</td></tr>
+        <tr><td>userId</td><td>UUID</td><td>Foreign key → User</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Notes -->
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">📌</span>
+      <h2>Catatan Penting</h2>
+    </div>
+    <div class="step-content">
+      <ul>
+        <li><strong>🧪 Mode Sandbox:</strong> <code>MIDTRANS_IS_PRODUCTION=false</code> → tombol "Simulasi Bayar ✅" muncul untuk testing tanpa bayar</li>
+        <li><strong>🔧 Mock Mode:</strong> Jika <code>MIDTRANS_SERVER_KEY</code> kosong, sistem otomatis mock — token palsu, redirect lokal</li>
+        <li><strong>⏱ Polling:</strong> Frontend cek status tiap 3 detik, timeout 5 menit</li>
+        <li><strong>🌐 Webhook:</strong> Midtrans kirim notifikasi ke <code>/api/payment/webhook</code> (endpoint publik)</li>
+        <li><strong>💾 R2 Fallback:</strong> Jika R2 tidak dikonfigurasi, foto disimpan di <code>public/uploads/</code></li>
+        <li><strong>🔒 Keamanan:</strong> Semua endpoint admin &amp; dashboard diproteksi Clerk middleware</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <p>❤ <strong>My Universe</strong> — Dibuat dengan cinta oleh ELLL</p>
+  <p>Dokumen ini bisa dicetak sebagai PDF (File → Print → Save as PDF)</p>
+</div>
+
+</body>
+</html>
