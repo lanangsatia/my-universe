@@ -51,17 +51,18 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      // Existing user — append photos, keep slug if already set
-      slug = dbUser.slug || slug;
-      if (slug !== dbUser.slug) {
-        const existingUser = await prisma.user.findUnique({ where: { slug } });
+      // Existing user — use submitted slug (they may have been created via webhook with user-xxx)
+      const finalSlug = slug || dbUser.slug;
+      if (finalSlug !== dbUser.slug) {
+        const existingUser = await prisma.user.findUnique({ where: { slug: finalSlug } });
         if (existingUser) return NextResponse.json({ error: 'Slug sudah dipakai' }, { status: 409 });
       }
       // Update user
       await prisma.user.update({
         where: { id: dbUser.id },
-        data: { name: title || 'My Universe', slug, maxPhotos: 10 },
+        data: { name: title || 'My Universe', slug: finalSlug, maxPhotos: 10 },
       });
+      slug = finalSlug;
     }
 
     // Upload new photos

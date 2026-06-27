@@ -89,22 +89,28 @@ export async function PATCH(
     const body = await req.json();
     const { action } = body; // 'ban' | 'unban'
 
-    // Get user from DB to find clerkId
-    const dbUser = await prisma.user.findUnique({ where: { id } });
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    // Support Clerk-only users (id = clerk-{clerkId})
+    let clerkId: string | null = null;
+    if (id.startsWith('clerk-')) {
+      clerkId = id.replace('clerk-', '');
+    } else {
+      const dbUser = await prisma.user.findUnique({ where: { id } });
+      if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      clerkId = dbUser.clerkId;
+      // Cegah ban/unban admin
+      if (clerkId) {
+        const targetClerk = await client.users.getUser(clerkId);
+        if (targetClerk.publicMetadata?.isAdmin === true) {
+          return NextResponse.json({ error: 'Tidak bisa memodifikasi admin' }, { status: 403 });
+        }
+      }
     }
 
-    // Cegah ban/unban admin
-    if (dbUser.clerkId) {
-      const targetClerk = await client.users.getUser(dbUser.clerkId);
-      if (targetClerk.publicMetadata?.isAdmin === true) {
-        return NextResponse.json({ error: 'Tidak bisa memodifikasi admin' }, { status: 403 });
-      }
+    if (clerkId) {
       if (action === 'ban') {
-        await client.users.banUser(dbUser.clerkId);
+        await client.users.banUser(clerkId);
       } else if (action === 'unban') {
-        await client.users.unbanUser(dbUser.clerkId);
+        await client.users.unbanUser(clerkId);
       }
     }
 
@@ -127,6 +133,19 @@ export async function DELETE(
     }
 
     const { id } = await params;
+
+    // Support Clerk-only users (id = clerk-{clerkId})
+    if (id.startsWith('clerk-')) {
+      const clerkId = id.replace('clerk-', '');
+      // Cegah hapus admin
+      const targetClerk = await client.users.getUser(clerkId);
+      if (targetClerk.publicMetadata?.isAdmin === true) {
+        return NextResponse.json({ error: 'Tidak bisa menghapus admin' }, { status: 403 });
+      }
+      // Delete from Clerk only (no DB record)
+      await client.users.deleteUser(clerkId);
+      return NextResponse.json({ success: true });
+    }
 
     const dbUser = await prisma.user.findUnique({ where: { id } });
     if (!dbUser) {

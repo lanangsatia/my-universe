@@ -35,8 +35,11 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Get Clerk user info
+    // Get all Clerk users
     const clerkUsers = await client.users.getUserList();
+    const adminClerkId = adminUser.id;
+
+    // Build map of Clerk users keyed by ID
     const clerkMap = new Map(clerkUsers.data.map(u => [u.id, {
       email: u.emailAddresses?.[0]?.emailAddress,
       imageUrl: u.imageUrl,
@@ -47,33 +50,64 @@ export async function GET() {
       isAdmin: u.publicMetadata?.isAdmin === true,
     }]));
 
-    // Get admin's own clerkId to exclude from list
-    const adminClerkId = adminUser.id;
+    // Build map of DB users keyed by clerkId
+    const dbMap = new Map(dbUsers.filter(u => u.clerkId).map(u => [u.clerkId!, u]));
 
-    const users = dbUsers
-      .filter(u => u.clerkId !== adminClerkId) // Jangan tampilkan admin
-      .map(u => {
-        const clerk = u.clerkId ? clerkMap.get(u.clerkId) : null;
-        // Juga filter admin dari clerkMap
-        if (clerk?.isAdmin) return null;
-        return {
-          id: u.id,
-          clerkId: u.clerkId,
-          email: u.email,
-          name: u.name,
-          slug: u.slug,
-          package: u.package,
-          maxPhotos: u.maxPhotos,
-          photoCount: u._count.photos,
-          paymentCount: u._count.payments,
-          createdAt: u.createdAt,
-          isActive: !clerk?.banned,
-          clerkName: clerk?.fullName || clerk?.username || clerk?.email,
-          avatar: clerk?.imageUrl,
-          lastLogin: clerk?.lastSignInAt,
-        };
-      })
-      .filter(Boolean);
+    // Merge: include all Clerk users (non-admin) + DB users without clerkId
+    const seenIds = new Set<string>();
+    const users: any[] = [];
+
+    // 1. All Clerk users (excluding admins and the logged-in admin)
+    for (const [clerkId, clerk] of clerkMap) {
+      if (clerk.isAdmin || clerkId === adminClerkId) continue;
+      seenIds.add(clerkId);
+      const db = dbMap.get(clerkId);
+      users.push({
+        id: db?.id || `clerk-${clerkId}`,
+        clerkId,
+        email: clerk.email || db?.email || `${clerkId}@clerk`,
+        name: db?.name || clerk.fullName || clerk.username || clerk.email?.split('@')[0] || 'User',
+        slug: db?.slug || null,
+        package: db?.package || 'free',
+        maxPhotos: db?.maxPhotos || 5,
+        photoCount: db?._count?.photos || 0,
+        paymentCount: db?._count?.payments || 0,
+        createdAt: db?.createdAt || null,
+        isActive: !clerk.banned,
+        clerkName: clerk.fullName || clerk.username || clerk.email,
+        avatar: clerk.imageUrl,
+        lastLogin: clerk.lastSignInAt,
+      });
+    }
+
+    // 2. DB users without clerkId (legacy/fallback)
+    for (const db of dbUsers) {
+      if (!db.clerkId && !seenIds.has(db.id)) {
+        seenIds.add(db.id);
+        users.push({
+          id: db.id,
+          clerkId: null,
+          email: db.email,
+          name: db.name,
+          slug: db.slug,
+          package: db.package,
+          maxPhotos: db.maxPhotos,
+          photoCount: db._count.photos,
+          paymentCount: db._count.payments,
+          createdAt: db.createdAt,
+          isActive: true,
+          clerkName: db.name,
+          avatar: null,
+          lastLogin: null,
+        });
+      }
+    }
+
+    users.sort((a, b) => {
+      if (!a.createdAt) return 1;
+      if (!b.createdAt) return -1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
     return NextResponse.json({ users });
   } catch (error) {

@@ -15,26 +15,20 @@ export async function POST() {
 
     for (const cu of clerkUsers.data) {
       const email = cu.emailAddresses?.[0]?.emailAddress || `${cu.id}@clerk`;
-      const name = cu.fullName || cu.username || email;
 
       const existing = await prisma.user.findFirst({
         where: { OR: [{ clerkId: cu.id }, { email }] },
       });
 
       if (existing) {
+        // Only update clerkId if missing — don't create fake globe entries
         if (!existing.clerkId) {
           await prisma.user.update({ where: { id: existing.id }, data: { clerkId: cu.id } });
           updated++;
         }
-      } else {
-        await prisma.user.create({
-          data: {
-            clerkId: cu.id, email, name: name || 'User',
-            slug: `user-${cu.id.slice(-8)}`, package: 'free', maxPhotos: 5,
-          },
-        });
-        created++;
       }
+      // Don't create new users here — users are created naturally
+      // when they go through the publish/payment flow
     }
 
     return NextResponse.json({ created, updated, total: clerkUsers.data.length });

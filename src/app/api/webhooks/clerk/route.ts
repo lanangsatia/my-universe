@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const { id, email_addresses, first_name, last_name, username } = evt.data;
     const email = email_addresses?.[0]?.email_address || `${id}@clerk`;
     const name = [first_name, last_name].filter(Boolean).join(' ') || username || email.split('@')[0];
-    const slug = username || `user-${id.slice(-8)}`;
+    const slug = `user-${id.slice(-8)}`; // Clear marker: this user hasn't published yet
 
     try {
       await prisma.user.create({

@@ -152,20 +152,27 @@ function UsersTab({ onError }: { onError: (e: string) => void }) {
                     <span style={{ fontWeight: 600 }}>{u.clerkName || u.name}</span>
                   </div>
                 </td>
-                <td style={{ padding: '12px 10px', color: 'rgba(255,255,255,0.6)' }}>{u.slug || '-'}</td>
+                <td style={{ padding: '12px 10px', color: 'rgba(255,255,255,0.6)' }}>
+                  {u.slug?.startsWith('user-') ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.3)' }}>{u.slug}</span>
+                      <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: 'rgba(251,191,36,0.2)', color: '#fbbf24' }}>Baru</span>
+                    </span>
+                  ) : (u.slug || '-')}
+                </td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>{u.photoCount}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                   <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: u.isActive ? '#22c55e' : '#ef4444', marginRight: 6 }} />
                   <span style={{ color: u.isActive ? '#22c55e' : '#ef4444', fontSize: 12 }}>{u.isActive ? 'Aktif' : 'Diban'}</span>
                 </td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                  {u.slug ? (
+                  {u.slug && !u.slug.startsWith('user-') ? (
                     <a href={`/u/${u.slug}`} target="_blank" style={{ padding: '4px 10px', fontSize: 11, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, background: 'transparent', color: '#a855f7', cursor: 'pointer', textDecoration: 'none' }}>Preview</a>
                   ) : <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>-</span>}
                 </td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                    <button onClick={() => openEdit(u.id)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, background: 'transparent', color: '#a855f7', cursor: 'pointer' }}>Edit</button>
+                    {!u.id?.startsWith?.('clerk-') && <button onClick={() => openEdit(u.id)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, background: 'transparent', color: '#a855f7', cursor: 'pointer' }}>Edit</button>}
                     <button onClick={() => toggleBan(u.id, u.isActive, u.name)} disabled={actionLoading === `ban-${u.id}`} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, background: 'transparent', color: u.isActive ? '#ef4444' : '#22c55e', cursor: actionLoading === `ban-${u.id}` ? 'wait' : 'pointer', opacity: actionLoading === `ban-${u.id}` ? 0.6 : 1 }}>{actionLoading === `ban-${u.id}` ? '⏳' : u.isActive ? 'Ban' : 'Unban'}</button>
                     <button onClick={() => del(u.id, u.name)} disabled={actionLoading === `del-${u.id}`} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid #ef4444', borderRadius: 6, background: 'transparent', color: '#ef4444', cursor: actionLoading === `del-${u.id}` ? 'wait' : 'pointer', opacity: actionLoading === `del-${u.id}` ? 0.6 : 1 }}>{actionLoading === `del-${u.id}` ? '⏳' : 'Hapus'}</button>
                   </div>
