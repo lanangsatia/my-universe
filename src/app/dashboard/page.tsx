@@ -371,19 +371,19 @@ export default function DashboardPage() {
             
               {paymentStatus === 'PAID' ? (
                 <div style={{ padding: '12px 0', color: '#22c55e', fontSize: 15, fontWeight: 600 }}>✅ Menerbitkan globe...</div>
-              ) : process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true' ? (
-                <button onClick={() => { setShowPayment(false); }} style={{ width: '100%', padding: '14px 32px', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Tutup</button>
               ) : (
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => { setShowPayment(false); }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Batal</button>
-                  <button onClick={async () => {
-                    await fetch('/api/payment/simulate', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ order_id: paymentRef }),
-                    });
-                    doPublish();
-                  }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Simulasi Bayar ✅</button>
+                  <button onClick={() => { setShowPayment(false); }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Tutup</button>
+                  {process.env.NEXT_PUBLIC_SHOW_SIMULATE_PAYMENT !== 'false' && (
+                    <button onClick={async () => {
+                      await fetch('/api/payment/simulate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: paymentRef }),
+                      });
+                      doPublish();
+                    }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Simulasi Bayar ✅</button>
+                  )}
                 </div>
               )}
             </div>
