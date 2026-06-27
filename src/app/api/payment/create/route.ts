@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 import { createSnapTransaction } from '@/lib/midtrans';
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    if (!session.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await req.json();
     const { package: pkg, amount } = body;
 

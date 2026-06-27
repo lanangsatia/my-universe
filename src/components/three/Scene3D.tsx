@@ -57,6 +57,13 @@ function getCachedTexture(url: string): Promise<THREE.Texture> {
       tex.minFilter = THREE.LinearFilter;
       tex.magFilter = THREE.LinearFilter;
       resolve(tex);
+    }, undefined, () => {
+      // On error: create a small colored texture as fallback so the promise resolves
+      const c = document.createElement('canvas'); c.width = 16; c.height = 16;
+      const ctx = c.getContext('2d')!;
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(0, 0, 16, 16);
+      const tex = new THREE.CanvasTexture(c);
+      resolve(tex);
     });
   });
 }

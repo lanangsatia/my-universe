@@ -132,7 +132,10 @@ export default function DashboardPage() {
 
   const saveConfig = async () => {
     setSavingConfig(true);
-    try { await fetch('/api/globe/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) }); } catch {}
+    try {
+      const res = await fetch('/api/globe/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) });
+      if (!res.ok) { alert('Gagal menyimpan pengaturan'); }
+    } catch { alert('Terjadi kesalahan saat menyimpan'); }
     setSavingConfig(false);
   };
 
@@ -186,14 +189,17 @@ export default function DashboardPage() {
 
       // Poll payment status
       const poll = setInterval(async () => {
-        const r = await fetch(`/api/payment/status/${data.reference_id}`);
-        const d = await r.json();
-        if (d.status === 'PAID') {
-          clearInterval(poll);
-          setPaymentStatus('PAID');
-          alert('✅ Pembayaran berhasil! Globe sedang diterbitkan...');
-          doPublish();
-        }
+        try {
+          const r = await fetch(`/api/payment/status/${data.reference_id}`);
+          if (!r.ok) return;
+          const d = await r.json();
+          if (d.status === 'PAID') {
+            clearInterval(poll);
+            setPaymentStatus('PAID');
+            alert('✅ Pembayaran berhasil! Globe sedang diterbitkan...');
+            doPublish();
+          }
+        } catch { /* ignore poll errors */ }
       }, 3000);
 
       // Timeout after 5 minutes

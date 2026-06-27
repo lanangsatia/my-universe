@@ -113,22 +113,31 @@ function UsersTab({ onError }: { onError: (e: string) => void }) {
 
   const deletePhoto = async (photoId: string) => {
     if (!confirm('Hapus foto ini?')) return;
-    await fetch(`/api/globe/photo/${photoId}`, { method: 'DELETE' });
-    openEdit(editId!);
+    try {
+      const res = await fetch(`/api/globe/photo/${photoId}`, { method: 'DELETE' });
+      if (!res.ok) { const err = await res.json(); alert(err.error || 'Gagal hapus foto'); return; }
+      openEdit(editId!);
+    } catch { alert('Terjadi kesalahan saat menghapus foto'); }
   };
 
   const toggleBan = async (id: string, active: boolean, name: string) => {
     setActionLoading(`ban-${id}`);
-    await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: active ? 'ban' : 'unban' }) });
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: active ? 'ban' : 'unban' }) });
+      if (!res.ok) { const err = await res.json(); alert(err.error || 'Gagal'); setActionLoading(null); return; }
+      loadUsers();
+    } catch { alert('Terjadi kesalahan'); }
     setActionLoading(null);
-    loadUsers();
   };
   const del = async (id: string, name: string) => {
     if (!confirm(`Hapus "${name}"? Semua data akan hilang!`)) return;
     setActionLoading(`del-${id}`);
-    await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+      if (!res.ok) { const err = await res.json(); alert(err.error || 'Gagal hapus'); setActionLoading(null); return; }
+      loadUsers();
+    } catch { alert('Terjadi kesalahan'); }
     setActionLoading(null);
-    loadUsers();
   };
   if (loading) return <Spinner text="Memuat users..." />;
   return (
@@ -378,19 +387,23 @@ function LandingTab({ onError }: { onError: (e: string) => void }) {
         photoUrls.push(p.url);
       }
     }
-    await fetch('/api/admin/landing', {
+    const res = await fetch('/api/admin/landing', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ greetingText: greeting, questionText: question, photoUrls }),
     });
+    if (!res.ok) { const err = await res.json(); alert(err.error || 'Gagal menyimpan'); setSaving(false); return; }
     alert('✅ Landing tersimpan!');
     setSaving(false);
   };
 
   const syncClerk = async () => {
     setSyncing(true); setSyncRes('');
-    const r = await fetch('/api/admin/sync', { method: 'POST' });
-    const d = await r.json();
-    setSyncRes(`✅ ${d.created} dibuat, ${d.updated} diperbarui dari ${d.total} user`);
+    try {
+      const r = await fetch('/api/admin/sync', { method: 'POST' });
+      if (!r.ok) { const err = await r.json(); setSyncRes(`❌ ${err.error || 'Gagal sync'}`); setSyncing(false); return; }
+      const d = await r.json();
+      setSyncRes(`✅ ${d.created || 0} dibuat, ${d.updated || 0} diperbarui dari ${d.total || 0} user`);
+    } catch { setSyncRes('❌ Gagal terhubung ke server'); }
     setSyncing(false);
   };
 
