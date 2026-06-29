@@ -31,10 +31,19 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingPayment) {
-      // Return existing payment with a fresh Snap token so user can still pay
-      const snap = await createSnapTransaction(existingPayment.amount, existingPayment.orderId);
+      // Generate a new orderId since the old one was already registered with Midtrans
+      const newOrderId = `GLOBE-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+      // Update the existing payment record with the new orderId
+      await prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: { orderId: newOrderId },
+      });
+
+      // Create a fresh Snap transaction with the new orderId
+      const snap = await createSnapTransaction(existingPayment.amount, newOrderId);
       return NextResponse.json({
-        reference_id: existingPayment.orderId,
+        reference_id: newOrderId,
         token: snap.token,
         redirect_url: snap.redirect_url,
         amount: existingPayment.amount,

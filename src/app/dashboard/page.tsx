@@ -59,6 +59,7 @@ export default function DashboardPage() {
   const [paymentToken, setPaymentToken] = useState('');
   const [paymentRedirectUrl, setPaymentRedirectUrl] = useState('');
   const payingRef = useRef(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Load Midtrans Snap script
   useEffect(() => {
@@ -225,12 +226,14 @@ export default function DashboardPage() {
       } catch {}
 
       // Create payment
+      setPaymentLoading(true);
       const res = await fetch('/api/payment/qris', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: paymentAmount }),
       });
       const data = await res.json();
+      setPaymentLoading(false);
       if (!res.ok) { alert(data.error || 'Gagal membuat pembayaran'); setPublishing(false); return; }
       setPaymentRef(data.reference_id);
       setPaymentToken(data.token || '');
@@ -278,6 +281,7 @@ export default function DashboardPage() {
                 {qrCodeDataUrl && <button onClick={() => { const a = document.createElement('a'); a.href = qrCodeDataUrl; a.download = 'qrcode.png'; a.click(); }} style={{ padding: '4px 10px', fontSize: 12, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', cursor: 'pointer' }}>⬇️ Download QR</button>}
                 {pendingPayment && (
                   <button onClick={async () => {
+                    setPaymentLoading(true);
                     // If payment data is lost (page refresh), fetch existing payment
                     if (!paymentRef && pendingPayment) {
                       const r = await fetch('/api/payment/qris', {
@@ -295,8 +299,9 @@ export default function DashboardPage() {
                         }
                       }
                     }
+                    setPaymentLoading(false);
                     setShowPayment(true);
-                  }} style={{ padding: '4px 14px', fontSize: 12, background: 'linear-gradient(135deg, #f59e0b, #ef4444)', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>💳 Bayar Sekarang</button>
+                  }} disabled={paymentLoading} style={{ padding: '4px 14px', fontSize: 12, background: 'linear-gradient(135deg, #f59e0b, #ef4444)', border: 'none', borderRadius: 6, color: '#fff', cursor: paymentLoading ? 'wait' : 'pointer', fontWeight: 600, opacity: paymentLoading ? 0.6 : 1 }}>{paymentLoading ? '⏳ Memuat...' : '💳 Bayar Sekarang'}</button>
                 )}
               </div>
             </div>
@@ -339,15 +344,22 @@ export default function DashboardPage() {
         {/* QRIS PAYMENT MODAL */}
         {showPayment && (
           <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 99999, backdropFilter: 'blur(8px)' }}>
-            <div style={{ background: '#1a1a2e', borderRadius: 20, padding: '32px 28px', maxWidth: 380, width: '90%', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ position: 'relative', background: '#1a1a2e', borderRadius: 20, padding: '32px 28px', maxWidth: 380, width: '90%', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+              {paymentLoading && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(26,26,46,0.85)', borderRadius: 20, zIndex: 10, flexDirection: 'column', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.2)', borderTop: '3px solid #a855f7', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>Memproses pembayaran...</span>
+                </div>
+              )}
               <div style={{ fontSize: 32, marginBottom: 8 }}>💳</div>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Bayar untuk Terbitkan</h3>
               <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 16 }}>Klik tombol di bawah untuk membayar via QRIS/GoPay/OVO/Bank Transfer</p>
               <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 16, background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rp {paymentAmount.toLocaleString('id-ID')}</div>
               {paymentToken ? (
                 <button onClick={() => {
-                  if (payingRef.current) return;
+                  if (payingRef.current || paymentLoading) return;
                   payingRef.current = true;
+                  setPaymentLoading(true);
                   (window as any).snap.pay(paymentToken, {
                     onSuccess: async () => {
                       await fetch('/api/payment/simulate', {
@@ -356,13 +368,14 @@ export default function DashboardPage() {
                         body: JSON.stringify({ order_id: paymentRef }),
                       });
                       payingRef.current = false;
+                      setPaymentLoading(false);
                       doPublish();
                     },
-                    onPending: () => { payingRef.current = false; },
-                    onError: () => { payingRef.current = false; alert('Pembayaran gagal, coba lagi.'); },
-                    onClose: () => { payingRef.current = false; },
+                    onPending: () => { payingRef.current = false; setPaymentLoading(false); },
+                    onError: () => { payingRef.current = false; setPaymentLoading(false); alert('Pembayaran gagal, coba lagi.'); },
+                    onClose: () => { payingRef.current = false; setPaymentLoading(false); },
                   });
-                }} style={{ display: 'inline-block', marginBottom: 12, padding: '14px 32px', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 15, border: 'none', cursor: 'pointer' }}>💳 Bayar Sekarang</button>
+                }} disabled={paymentLoading} style={{ display: 'inline-block', marginBottom: 12, padding: '14px 32px', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 15, border: 'none', cursor: paymentLoading ? 'wait' : 'pointer', opacity: paymentLoading ? 0.6 : 1 }}>{paymentLoading ? '⏳ Memproses...' : '💳 Bayar Sekarang'}</button>
               ) : (
                 paymentRedirectUrl && (
                   <a href={paymentRedirectUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginBottom: 12, padding: '14px 32px', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 15 }}>💳 Bayar Sekarang</a>
@@ -373,16 +386,18 @@ export default function DashboardPage() {
                 <div style={{ padding: '12px 0', color: '#22c55e', fontSize: 15, fontWeight: 600 }}>✅ Menerbitkan globe...</div>
               ) : (
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => { setShowPayment(false); }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Tutup</button>
+                  <button onClick={() => { if (!paymentLoading) setShowPayment(false); }} disabled={paymentLoading} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: paymentLoading ? 'wait' : 'pointer', fontSize: 15, fontWeight: 600, opacity: paymentLoading ? 0.4 : 1 }}>Tutup</button>
                   {process.env.NEXT_PUBLIC_SHOW_SIMULATE_PAYMENT !== 'false' && (
                     <button onClick={async () => {
+                      setPaymentLoading(true);
                       await fetch('/api/payment/simulate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ order_id: paymentRef }),
                       });
+                      setPaymentLoading(false);
                       doPublish();
-                    }} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 15, fontWeight: 600 }}>Simulasi Bayar ✅</button>
+                    }} disabled={paymentLoading} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: paymentLoading ? 'wait' : 'pointer', fontSize: 15, fontWeight: 600, opacity: paymentLoading ? 0.5 : 1 }}>{paymentLoading ? '⏳ Memproses...' : 'Simulasi Bayar ✅'}</button>
                   )}
                 </div>
               )}

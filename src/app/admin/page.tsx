@@ -338,7 +338,9 @@ function PaymentsTab({ onError }: { onError: (e: string) => void }) {
             <th style={{ padding: '12px 10px', textAlign: 'left', color: 'rgba(255,255,255,0.5)' }}>User</th>
             <th style={{ padding: '12px 10px', textAlign: 'right', color: 'rgba(255,255,255,0.5)' }}>Jumlah</th>
             <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Status</th>
-            <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Tanggal</th>
+            <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Dibuat</th>
+            <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Diperbarui</th>
+            <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Dibayar</th>
             <th style={{ padding: '12px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.5)' }}>Aksi</th>
           </tr></thead>
           <tbody>
@@ -351,6 +353,8 @@ function PaymentsTab({ onError }: { onError: (e: string) => void }) {
                   <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, background: p.status==='PAID' ? 'rgba(34,197,94,0.2)' : 'rgba(251,191,36,0.2)', color: p.status==='PAID' ? '#22c55e' : '#fbbf24' }}>{p.status}</span>
                 </td>
                 <td style={{ padding: '12px 10px', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{new Date(p.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                <td style={{ padding: '12px 10px', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{new Date(p.updatedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                <td style={{ padding: '12px 10px', textAlign: 'center', fontSize: 11, color: p.paidAt ? 'rgba(34,197,94,0.8)' : 'rgba(255,255,255,0.2)' }}>{p.paidAt ? new Date(p.paidAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
                   {p.status !== 'PAID' && <button onClick={() => markPaid(p.orderId)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid #22c55e', borderRadius: 6, background: 'transparent', color: '#22c55e', cursor: 'pointer' }}>Mark PAID</button>}
                 </td>

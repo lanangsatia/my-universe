@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const payments = await prisma.payment.findMany({
       where,
       include: { user: { select: { id: true, name: true, slug: true, clerkId: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       take: 100,
     });
 
