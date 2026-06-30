@@ -25,56 +25,77 @@ export default function Home() {
   const [photos, setPhotos] = useState<string[] | null>(null);
   const [greetingText, setGreetingText] = useState(DEFAULT_GREETING);
   const [questionText, setQuestionText] = useState(DEFAULT_QUESTION);
+  const [globeConfig, setGlobeConfig] = useState<any>(null);
   const [dataReady, setDataReady] = useState(false);
+  const [transitionLoading, setTransitionLoading] = useState(false);
+
+  const fetchGuardRef = useRef<boolean | undefined>(undefined);
 
   // Keep loading overlay until ALL data is fetched AND photos are preloaded
   useEffect(() => {
+    // Wait for Clerk to resolve auth state (prevents double fetch on init)
+    if (isSignedIn === undefined) return;
+
+    // Prevent double fetch for the same auth state
+    if (fetchGuardRef.current === isSignedIn) return;
+    fetchGuardRef.current = isSignedIn;
+
     let mounted = true;
-    let resolved = 0;
     let photoUrlsToLoad: string[] = [];
 
-    const checkDone = async () => {
+    // When transitioning from not-logged-in to logged-in, show loading
+    if (isSignedIn) {
+      setTransitionLoading(true);
+    } else {
+      // Reset user-specific state when auth changes (e.g. sign out)
+      setPhotos(null);
+      setGlobeConfig(null);
+      setGreetingText(DEFAULT_GREETING);
+      setQuestionText(DEFAULT_QUESTION);
+    }
+
+    const finish = async () => {
       if (!mounted) return;
-      resolved++;
-      if (resolved >= 2) {
-        // Preload all photos before hiding loading overlay
-        if (photoUrlsToLoad.length > 0) {
-          await preloadTextures(photoUrlsToLoad);
-        }
-        if (mounted) {
-          setDataReady(true);
-          setTimeout(() => setIsLoading(false), 300);
-        }
+      if (photoUrlsToLoad.length > 0) {
+        await preloadTextures(photoUrlsToLoad);
+      }
+      if (mounted) {
+        setDataReady(true);
+        setTransitionLoading(false);
+        setTimeout(() => setIsLoading(false), 300);
       }
     };
-    const fallback = setTimeout(() => { if (!mounted) return; setDataReady(true); setIsLoading(false); }, 8000);
+    const fallback = setTimeout(() => { if (!mounted) return; setDataReady(true); setIsLoading(false); setTransitionLoading(false); }, 8000);
 
-    // Fetch landing defaults (public)
-    fetch('/api/admin/landing')
-      .then(r => r.json())
-      .then(data => {
-        if (!mounted) return;
-        if (data.photoUrls?.length) { photoUrlsToLoad = data.photoUrls; setPhotos(data.photoUrls); }
-        if (data.greetingText) setGreetingText(data.greetingText);
-        if (data.questionText) setQuestionText(data.questionText);
-      })
-      .catch(() => {})
-      .finally(() => { checkDone(); });
-
-    // If logged in & has globe, override with personal data
-    const fetchUserGlobe = async () => {
-      try {
-        const sub = await fetch('/api/user/subscription').then(r => r.ok ? r.json() : null);
-        if (!mounted || !sub?.slug) { checkDone(); return; }
-        const data = await fetch(`/api/users/${sub.slug}`).then(r => r.json());
-        if (!mounted) return;
-        if (data.photos?.length) { photoUrlsToLoad = data.photos.map((p: any) => p.imageUrl); setPhotos(photoUrlsToLoad); }
-        if (data.config?.greetingText) setGreetingText(data.config.greetingText);
-        if (data.config?.questionText) setQuestionText(data.config.questionText);
-      } catch {}
-      checkDone();
-    };
-    if (isSignedIn) fetchUserGlobe(); else checkDone();
+    if (isSignedIn) {
+      // If logged in, try user's globe first
+      (async () => {
+        try {
+          const sub = await fetch('/api/user/subscription').then(r => r.ok ? r.json() : null);
+          if (!mounted) return;
+          if (!sub?.slug) { finish(); return; }
+          const data = await fetch(`/api/users/${sub.slug}`).then(r => r.json());
+          if (!mounted) return;
+          if (data.photos?.length) { photoUrlsToLoad = data.photos.map((p: any) => p.imageUrl); setPhotos(photoUrlsToLoad); }
+          if (data.config) setGlobeConfig(data.config);
+          if (data.config?.greetingText) setGreetingText(data.config.greetingText);
+          if (data.config?.questionText) setQuestionText(data.config.questionText);
+        } catch {}
+        finish();
+      })();
+    } else {
+      // Not logged in — use landing defaults
+      fetch('/api/admin/landing')
+        .then(r => r.json())
+        .then(data => {
+          if (!mounted) return;
+          if (data.photoUrls?.length) { photoUrlsToLoad = data.photoUrls; setPhotos(data.photoUrls); }
+          if (data.greetingText) setGreetingText(data.greetingText);
+          if (data.questionText) setQuestionText(data.questionText);
+        })
+        .catch(() => {})
+        .finally(() => { finish(); });
+    }
 
     return () => { mounted = false; clearTimeout(fallback); };
   }, [isSignedIn]);
@@ -94,7 +115,8 @@ export default function Home() {
     }
   }, []);
 
-  if (isLoading) {
+  if (isLoading || transitionLoading) {
+    const loadingPhotos = transitionLoading && photos?.length ? photos.length : null;
     return (
       <div id="flower-loading-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', left: 0, top: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)', zIndex: 999999, pointerEvents: 'none' }}>
         <div style={{ textAlign: 'center', color: '#fff', fontFamily: 'Arial,sans-serif' }}>
@@ -104,9 +126,11 @@ export default function Home() {
           <div style={{ width: '60px', height: '60px', border: '4px solid rgba(255,255,255,0.2)', borderTop: '4px solid #ff6b6b', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 25px', boxShadow: '0 0 30px rgba(255,107,107,0.6)' }} />
           <div className="gradient-text" style={{ fontSize: '24px', fontWeight: 700, marginBottom: '15px', textShadow: '0 0 15px rgba(255,255,255,0.6)' }}>Love Planet</div>
           <div style={{ fontSize: '18px', fontWeight: 500, marginBottom: '10px', textShadow: '0 0 10px rgba(255,255,255,0.5)' }}>A world shaped with love, just for you...</div>
-          {photos && photos.length > 0
-            ? <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Menyiapkan {photos.length} foto kenangan ✨</div>
-            : <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Just a moment ✨</div>}
+          {transitionLoading
+            ? <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Memuat globe kamu ✨</div>
+            : photos && photos.length > 0
+              ? <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Menyiapkan {photos.length} foto kenangan ✨</div>
+              : <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>Just a moment ✨</div>}
         </div>
       </div>
     );
@@ -115,7 +139,7 @@ export default function Home() {
   return (
     <main style={{ width: '100%', height: '100vh', overflow: 'hidden', background: '#000', position: 'relative' }}>
       <div className="stars-bg" />
-      <Scene3D photos={photos || SAMPLE_PHOTOS} autoRotate={isRotating} startAnimation={animTrigger} />
+      <Scene3D photos={photos || SAMPLE_PHOTOS} autoRotate={isRotating} startAnimation={animTrigger} config={globeConfig || undefined} />
 
       {showQuestion && (
         <div id="questionPanel" className="overlay-panel">
