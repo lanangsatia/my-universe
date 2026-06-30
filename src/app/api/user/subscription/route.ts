@@ -24,10 +24,19 @@ export async function GET() {
       return NextResponse.json({ slug: null, photos: 0, maxPhotos: 10, pendingPayment: false });
     }
 
-    // Check for pending payment
-    const pendingPayment = await prisma.payment.findFirst({
-      where: { userId: user.id, status: 'PENDING' },
+    // If already paid, no pending payment
+    const paidPayment = await prisma.payment.findFirst({
+      where: { userId: user.id, status: 'PAID' },
     });
+
+    let pendingPayment = false;
+    if (!paidPayment) {
+      // Check for unpaid pending payment
+      const pendingPay = await prisma.payment.findFirst({
+        where: { userId: user.id, status: { in: ['PENDING', 'MANUAL_PENDING'] } },
+      });
+      pendingPayment = !!pendingPay;
+    }
 
     // If slug is auto-generated (user-xxx), treat as not yet published
     const hasGlobe = user.slug && !user.slug.startsWith('user-');
@@ -36,7 +45,7 @@ export async function GET() {
       slug: hasGlobe ? user.slug : null,
       photos: user._count.photos,
       maxPhotos: 10,
-      pendingPayment: !!pendingPayment,
+      pendingPayment,
     });
   } catch (error) {
     console.error('Subscription check error:', error);

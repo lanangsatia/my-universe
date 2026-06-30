@@ -320,6 +320,7 @@ function PaymentsTab({ onError }: { onError: (e: string) => void }) {
   const [payments, setPayments] = useState<any[]>([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [proofModal, setProofModal] = useState<string | null>(null);
   const fetchPay = (s: string) => { setLoading(true); fetch(`/api/admin/payments?status=${s}`).then(r => r.ok ? r.json() : Promise.reject()).then(d => { setPayments(d.payments); setLoading(false); }).catch(() => { onError('Akses ditolak'); }); };
   useEffect(() => { fetchPay(filter); }, [filter]);
   if (loading) return <Spinner text="Memuat pembayaran..." />;
@@ -327,8 +328,8 @@ function PaymentsTab({ onError }: { onError: (e: string) => void }) {
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {['all','PENDING','PAID'].map(s => (
-          <button key={s} onClick={() => setFilter(s)} style={{ padding: '6px 14px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, background: filter===s ? 'rgba(168,85,247,0.2)' : 'transparent', color: '#fff', cursor: 'pointer', fontSize: 12 }}>{s==='all'?'Semua':s}</button>
+        {['all','PENDING','MANUAL_PENDING','PAID'].map(s => (
+          <button key={s} onClick={() => setFilter(s)} style={{ padding: '6px 14px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, background: filter===s ? 'rgba(168,85,247,0.2)' : 'transparent', color: '#fff', cursor: 'pointer', fontSize: 12 }}>{s==='all'?'Semua':s==='MANUAL_PENDING'?'Manual Pdg':s}</button>
         ))}
       </div>
       <div style={{ overflowX: 'auto' }}>
@@ -350,19 +351,34 @@ function PaymentsTab({ onError }: { onError: (e: string) => void }) {
                 <td style={{ padding: '12px 10px' }}>{p.user?.clerkName || p.user?.name || p.user?.slug || '-'}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: 600 }}>Rp {p.amount.toLocaleString('id-ID')}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                  <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, background: p.status==='PAID' ? 'rgba(34,197,94,0.2)' : 'rgba(251,191,36,0.2)', color: p.status==='PAID' ? '#22c55e' : '#fbbf24' }}>{p.status}</span>
+                  <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, background: p.status==='PAID' ? 'rgba(34,197,94,0.2)' : p.status==='MANUAL_PENDING' ? 'rgba(59,130,246,0.2)' : 'rgba(251,191,36,0.2)', color: p.status==='PAID' ? '#22c55e' : p.status==='MANUAL_PENDING' ? '#3b82f6' : '#fbbf24' }}>{p.status === 'MANUAL_PENDING' ? 'Manual' : p.status}</span>
                 </td>
                 <td style={{ padding: '12px 10px', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{new Date(p.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{new Date(p.updatedAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'center', fontSize: 11, color: p.paidAt ? 'rgba(34,197,94,0.8)' : 'rgba(255,255,255,0.2)' }}>{p.paidAt ? new Date(p.paidAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}</td>
                 <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                  {p.status !== 'PAID' && <button onClick={() => markPaid(p.orderId)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid #22c55e', borderRadius: 6, background: 'transparent', color: '#22c55e', cursor: 'pointer' }}>Mark PAID</button>}
+                  <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                    {p.proofUrl && (
+                      <button onClick={() => setProofModal(p.proofUrl)} style={{ padding: '4px 8px', fontSize: 11, border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, background: 'transparent', color: '#a855f7', cursor: 'pointer' }}>📎</button>
+                    )}
+                    {p.status !== 'PAID' && <button onClick={() => markPaid(p.orderId)} style={{ padding: '4px 10px', fontSize: 11, border: '1px solid #22c55e', borderRadius: 6, background: 'transparent', color: '#22c55e', cursor: 'pointer' }}>Mark PAID</button>}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Proof Modal */}
+      {proofModal && (
+        <div onClick={() => setProofModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', cursor: 'pointer' }}>
+          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
+            <button onClick={() => setProofModal(null)} style={{ position: 'absolute', top: -40, right: 0, background: 'none', border: 'none', color: '#fff', fontSize: 24, cursor: 'pointer', padding: 4 }}>✕</button>
+            <img src={proofModal} alt="Bukti Pembayaran" style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: 12, boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

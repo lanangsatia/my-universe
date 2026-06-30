@@ -74,7 +74,15 @@ export default function DashboardPage() {
   }, []);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [pendingPayment, setPendingPayment] = useState(false);
-  const [paymentAmount] = useState(29999); // Harga tetap
+  const [paymentAmount] = useState(Number(process.env.NEXT_PUBLIC_GLOBE_PRICE) || 29999);
+  const [paymentMethod, setPaymentMethod] = useState<'select' | 'midtrans' | 'manual'>('select');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [manualSuccess, setManualSuccess] = useState(false);
+  const enableManual = process.env.NEXT_PUBLIC_ENABLE_MANUAL_PAYMENT === 'true';
+  const qrisStaticImage = '/assets/images/qris-static.jpeg';
+  const merchantName = 'EL Digital';
+  const waNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '6289604800267';
 
   useEffect(() => {
     (async () => {
@@ -182,6 +190,25 @@ export default function DashboardPage() {
     setPublishing(false);
   };
 
+  const handleManualProofSubmit = async () => {
+    if (!proofFile) { alert('Pilih bukti pembayaran terlebih dahulu.'); return; }
+    setUploadingProof(true);
+    try {
+      const fd = new FormData();
+      fd.set('order_id', paymentRef);
+      fd.set('proof', proofFile);
+      const res = await fetch('/api/payment/manual-proof', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Gagal mengirim bukti'); setUploadingProof(false); return; }
+      setManualSuccess(true);
+      alert('✅ ' + data.message);
+    } catch { alert('Terjadi kesalahan saat mengirim bukti'); }
+    setUploadingProof(false);
+  };
+
   const handlePublish = async () => {
     if (newPhotos.length === 0) { alert('Pilih minimal 1 foto.'); return; }
     if (!slug) { alert('Isi slug globe terlebih dahulu.'); return; }
@@ -248,6 +275,9 @@ export default function DashboardPage() {
       }
       setPaymentStatus('PENDING');
       setPendingPayment(true);
+      setPaymentMethod(enableManual ? 'select' : 'midtrans');
+      setProofFile(null);
+      setManualSuccess(false);
       setShowPayment(true);
       setPublishing(false);
     } catch { alert('Terjadi kesalahan.'); setPublishing(false); }
@@ -300,6 +330,9 @@ export default function DashboardPage() {
                       }
                     }
                     setPaymentLoading(false);
+                    setPaymentMethod(enableManual ? 'select' : 'midtrans');
+                    setProofFile(null);
+                    setManualSuccess(false);
                     setShowPayment(true);
                   }} disabled={paymentLoading} style={{ padding: '4px 14px', fontSize: 12, background: 'linear-gradient(135deg, #f59e0b, #ef4444)', border: 'none', borderRadius: 6, color: '#fff', cursor: paymentLoading ? 'wait' : 'pointer', fontWeight: 600, opacity: paymentLoading ? 0.6 : 1 }}>{paymentLoading ? '⏳ Memuat...' : '💳 Bayar Sekarang'}</button>
                 )}
@@ -341,65 +374,196 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* QRIS PAYMENT MODAL */}
+        {/* PAYMENT MODAL */}
         {showPayment && (
-          <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.8)', zIndex: 99999, backdropFilter: 'blur(8px)' }}>
-            <div style={{ position: 'relative', background: '#1a1a2e', borderRadius: 20, padding: '32px 28px', maxWidth: 380, width: '90%', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-              {paymentLoading && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(26,26,46,0.85)', borderRadius: 20, zIndex: 10, flexDirection: 'column', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.2)', borderTop: '3px solid #a855f7', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>Memproses pembayaran...</span>
+          <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', zIndex: 99999, backdropFilter: 'blur(12px)' }}>
+            <div style={{ position: 'relative', background: 'linear-gradient(180deg, #1a1a2e 0%, #0f0f23 100%)', borderRadius: 24, padding: '32px 28px', maxWidth: 420, width: '90%', maxHeight: '90vh', overflowY: 'auto', textAlign: 'center', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 25px 60px rgba(0,0,0,0.5)' }}>
+              
+              {/* Loading overlay */}
+              {(paymentLoading || uploadingProof) && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,15,35,0.9)', borderRadius: 24, zIndex: 10, flexDirection: 'column', gap: 16 }}>
+                  <div style={{ width: 44, height: 44, border: '3px solid rgba(255,255,255,0.1)', borderTop: '3px solid #a855f7', borderRadius: '50%', animation: 'spin 1s linear infinite', boxShadow: '0 0 20px rgba(168,85,247,0.3)' }} />
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, letterSpacing: '0.3px' }}>{uploadingProof ? 'Mengirim bukti pembayaran...' : 'Memproses pembayaran...'}</span>
                 </div>
               )}
-              <div style={{ fontSize: 32, marginBottom: 8 }}>💳</div>
-              <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Bayar untuk Terbitkan</h3>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 16 }}>Klik tombol di bawah untuk membayar via QRIS/GoPay/OVO/Bank Transfer</p>
-              <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 16, background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rp {paymentAmount.toLocaleString('id-ID')}</div>
-              {paymentToken ? (
-                <button onClick={() => {
-                  if (payingRef.current || paymentLoading) return;
-                  payingRef.current = true;
-                  setPaymentLoading(true);
-                  (window as any).snap.pay(paymentToken, {
-                    onSuccess: async () => {
-                      await fetch('/api/payment/simulate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ order_id: paymentRef }),
-                      });
-                      payingRef.current = false;
-                      setPaymentLoading(false);
-                      doPublish();
-                    },
-                    onPending: () => { payingRef.current = false; setPaymentLoading(false); },
-                    onError: () => { payingRef.current = false; setPaymentLoading(false); alert('Pembayaran gagal, coba lagi.'); },
-                    onClose: () => { payingRef.current = false; setPaymentLoading(false); },
-                  });
-                }} disabled={paymentLoading} style={{ display: 'inline-block', marginBottom: 12, padding: '14px 32px', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 15, border: 'none', cursor: paymentLoading ? 'wait' : 'pointer', opacity: paymentLoading ? 0.6 : 1 }}>{paymentLoading ? '⏳ Memproses...' : '💳 Bayar Sekarang'}</button>
-              ) : (
-                paymentRedirectUrl && (
-                  <a href={paymentRedirectUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginBottom: 12, padding: '14px 32px', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 15 }}>💳 Bayar Sekarang</a>
-                )
-              )}
-            
-              {paymentStatus === 'PAID' ? (
-                <div style={{ padding: '12px 0', color: '#22c55e', fontSize: 15, fontWeight: 600 }}>✅ Menerbitkan globe...</div>
-              ) : (
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => { if (!paymentLoading) setShowPayment(false); }} disabled={paymentLoading} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: paymentLoading ? 'wait' : 'pointer', fontSize: 15, fontWeight: 600, opacity: paymentLoading ? 0.4 : 1 }}>Tutup</button>
-                  {process.env.NEXT_PUBLIC_SHOW_SIMULATE_PAYMENT !== 'false' && (
-                    <button onClick={async () => {
+
+              {/* ============ SCREEN: METHOD SELECTION ============ */}
+              {paymentMethod === 'select' && (
+                <>
+                  <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(255,107,107,0.2))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 28 }}>💳</div>
+                  <h3 style={{ color: '#fff', fontSize: 20, fontWeight: 700, marginBottom: 4, letterSpacing: '-0.3px' }}>Pilih Metode Pembayaran</h3>
+                  <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 20, background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.5px' }}>Rp {paymentAmount.toLocaleString('id-ID')}</div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                    {/* Opsi Instan — langsung buka Snap */}
+                    <button onClick={() => {
+                      if (payingRef.current || paymentLoading) return;
+                      if (!paymentToken) { setPaymentMethod('midtrans'); return; }
+                      payingRef.current = true;
                       setPaymentLoading(true);
-                      await fetch('/api/payment/simulate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ order_id: paymentRef }),
+                      (window as any).snap.pay(paymentToken, {
+                        onSuccess: async () => {
+                          await fetch('/api/payment/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: paymentRef }) });
+                          payingRef.current = false; setPaymentLoading(false); doPublish();
+                        },
+                        onPending: () => { payingRef.current = false; setPaymentLoading(false); },
+                        onError: () => { payingRef.current = false; setPaymentLoading(false); alert('Pembayaran gagal, coba lagi.'); },
+                        onClose: () => { payingRef.current = false; setPaymentLoading(false); },
                       });
-                      setPaymentLoading(false);
-                      doPublish();
-                    }} disabled={paymentLoading} style={{ flex: 1, padding: '14px 0', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, background: 'transparent', color: '#fff', cursor: paymentLoading ? 'wait' : 'pointer', fontSize: 15, fontWeight: 600, opacity: paymentLoading ? 0.5 : 1 }}>{paymentLoading ? '⏳ Memproses...' : 'Simulasi Bayar ✅'}</button>
+                    }} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 16, background: 'linear-gradient(135deg, rgba(168,85,247,0.12), rgba(255,107,107,0.08))', border: '1.5px solid rgba(168,85,247,0.25)', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: 14, fontWeight: 600, transition: 'all 0.2s' }}>
+                      <span style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>⚡</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700 }}>Pembayaran Instan</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 400, marginTop: 2 }}>Otomatis — QRIS, GoPay, OVO, Bank Transfer</div>
+                      </div>
+                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: 'rgba(34,197,94,0.15)', color: '#4ade80', fontWeight: 600, whiteSpace: 'nowrap' }}>⚡ Cepat</span>
+                    </button>
+                    {/* Opsi Manual */}
+                    <button onClick={() => setPaymentMethod('manual')} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 18px', borderRadius: 16, background: 'rgba(255,255,255,0.03)', border: '1.5px solid rgba(255,255,255,0.1)', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: 14, fontWeight: 600, transition: 'all 0.2s' }}>
+                      <span style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🤝</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 700 }}>Pembayaran Manual</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontWeight: 400, marginTop: 2 }}>Transfer ke QRIS statis, upload bukti</div>
+                      </div>
+                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: 'rgba(251,191,36,0.15)', color: '#fbbf24', fontWeight: 600, whiteSpace: 'nowrap' }}>🛡️ Aman</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => setShowPayment(false)} style={{ flex: 1, padding: '13px 0', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontSize: 14, fontWeight: 600, transition: 'all 0.2s' }}>Tutup</button>
+                    <a href={`https://wa.me/${waNumber}?text=Halo%20saya%20butuh%20bantuan%20pembayaran`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '13px 0', borderRadius: 12, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', cursor: 'pointer', fontSize: 14, fontWeight: 600, textDecoration: 'none', transition: 'all 0.2s' }}>🆘 Bantuan</a>
+                  </div>
+                </>
+              )}
+
+              {/* ============ SCREEN: MIDTRANS (INSTAN) ============ */}
+              {paymentMethod === 'midtrans' && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    {enableManual && (
+                      <button onClick={() => setPaymentMethod('select')} style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>←</button>
+                    )}
+                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0, flex: 1, letterSpacing: '-0.3px' }}>Pembayaran Instan</h3>
+                  </div>
+                  <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, marginBottom: 16 }}>Bayar via QRIS, GoPay, OVO, atau Bank Transfer</p>
+                  <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 20, background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rp {paymentAmount.toLocaleString('id-ID')}</div>
+                  {paymentToken ? (
+                    <button onClick={() => {
+                      if (payingRef.current || paymentLoading) return;
+                      payingRef.current = true;
+                      setPaymentLoading(true);
+                      (window as any).snap.pay(paymentToken, {
+                        onSuccess: async () => {
+                          await fetch('/api/payment/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: paymentRef }) });
+                          payingRef.current = false; setPaymentLoading(false); doPublish();
+                        },
+                        onPending: () => { payingRef.current = false; setPaymentLoading(false); },
+                        onError: () => { payingRef.current = false; setPaymentLoading(false); alert('Pembayaran gagal, coba lagi.'); },
+                        onClose: () => { payingRef.current = false; setPaymentLoading(false); },
+                      });
+                    }} disabled={paymentLoading} style={{ width: '100%', marginBottom: 14, padding: '15px 0', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 14, fontWeight: 700, fontSize: 15, border: 'none', cursor: paymentLoading ? 'wait' : 'pointer', opacity: paymentLoading ? 0.6 : 1, boxShadow: '0 4px 20px rgba(168,85,247,0.3)' }}>{paymentLoading ? '⏳ Memproses...' : '💳 Bayar Sekarang'}</button>
+                  ) : paymentRedirectUrl ? (
+                    <a href={paymentRedirectUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginBottom: 14, padding: '15px 0', background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', color: '#fff', borderRadius: 14, fontWeight: 700, fontSize: 15, textDecoration: 'none', boxShadow: '0 4px 20px rgba(168,85,247,0.3)' }}>💳 Bayar Sekarang</a>
+                  ) : null}
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => { if (!paymentLoading) setShowPayment(false); }} disabled={paymentLoading} style={{ flex: 1, padding: '12px 0', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', cursor: paymentLoading ? 'wait' : 'pointer', fontSize: 14, fontWeight: 600, opacity: paymentLoading ? 0.4 : 1 }}>Tutup</button>
+                    {process.env.NEXT_PUBLIC_SHOW_SIMULATE_PAYMENT !== 'false' && (
+                      <button onClick={async () => { setPaymentLoading(true); await fetch('/api/payment/simulate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: paymentRef }) }); setPaymentLoading(false); doPublish(); }} disabled={paymentLoading} style={{ flex: 1, padding: '12px 0', borderRadius: 12, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', cursor: paymentLoading ? 'wait' : 'pointer', fontSize: 14, fontWeight: 600, opacity: paymentLoading ? 0.5 : 1 }}>{paymentLoading ? '⏳' : 'Simulasi Bayar ✅'}</button>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* ============ SCREEN: MANUAL QRIS ============ */}
+              {paymentMethod === 'manual' && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <button onClick={() => { setPaymentMethod('select'); setProofFile(null); setManualSuccess(false); }} style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>←</button>
+                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0, flex: 1, letterSpacing: '-0.3px' }}>Pembayaran Manual</h3>
+                  </div>
+
+                  {/* Warning Banner */}
+                  <div style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(251,191,36,0.05))', border: '1px solid rgba(251,191,36,0.2)', marginBottom: 20, textAlign: 'left', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>⚠️</span>
+                    <div>
+                      <div style={{ fontSize: 12, color: '#fbbf24', fontWeight: 700, marginBottom: 2 }}>Perhatian</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>Pembayaran manual perlu diverifikasi admin. Proses verifikasi maksimal 1×24 jam.</div>
+                    </div>
+                  </div>
+
+                  {/* QRIS Card */}
+                  <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', padding: '20px', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 14 }}>
+                      <div style={{ padding: 8, background: '#fff', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
+                        <img src={qrisStaticImage} alt="QRIS Static" style={{ width: 160, height: 160, borderRadius: 8, objectFit: 'contain', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 6, background: 'linear-gradient(135deg, #a855f7, #ff6b6b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rp {paymentAmount.toLocaleString('id-ID')}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.8 }}>
+                      <div>🏪 <span style={{ color: 'rgba(255,255,255,0.7)' }}>{merchantName}</span></div>
+                      <div>💳 <span style={{ color: 'rgba(255,255,255,0.7)' }}>QRIS (Semua Bank & E-Wallet)</span></div>
+                    </div>
+                  </div>
+
+                  {/* Steps */}
+                  <div style={{ textAlign: 'left', marginBottom: 20, padding: '14px 16px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', fontWeight: 700, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cara Bayar:</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {[
+                        { icon: '📱', text: 'Scan QRIS via bank/e-wallet kamu' },
+                        { icon: '💸', text: `Bayar Rp ${paymentAmount.toLocaleString('id-ID')}` },
+                        { icon: '📤', text: 'Upload bukti bayar di bawah' },
+                      ].map((step, i) => (
+                        <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                          <span style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(168,85,247,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14 }}>{step.icon}</span>
+                          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.4 }}>{step.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Upload & Submit */}
+                  {!manualSuccess ? (
+                    <>
+                      {/* Upload area */}
+                      <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: '2px dashed rgba(255,255,255,0.12)', borderRadius: 14, padding: '18px', cursor: 'pointer', background: proofFile ? 'rgba(34,197,94,0.05)' : 'rgba(255,255,255,0.02)', marginBottom: 14, transition: 'all 0.2s' }}>
+                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setProofFile(f); e.target.value = ''; }} />
+                        {proofFile ? (
+                          <>
+                            <span style={{ fontSize: 28 }}>📎</span>
+                            <span style={{ fontSize: 13, color: '#4ade80', fontWeight: 600 }}>{proofFile.name}</span>
+                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>Klik untuk ganti file</span>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: 32, opacity: 0.6 }}>📤</span>
+                            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>Upload bukti pembayaran</span>
+                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>Screenshot atau foto bukti transfer</span>
+                          </>
+                        )}
+                      </label>
+
+                      {/* Buttons */}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={() => { setShowPayment(false); setProofFile(null); }} disabled={uploadingProof} style={{ flex: 1, padding: '13px 0', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', cursor: uploadingProof ? 'wait' : 'pointer', fontSize: 14, fontWeight: 600, opacity: uploadingProof ? 0.4 : 1 }}>Tutup</button>
+                        <button onClick={handleManualProofSubmit} disabled={!proofFile || uploadingProof} style={{ flex: 1.5, padding: '13px 0', border: 'none', borderRadius: 12, background: !proofFile ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff', cursor: !proofFile ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, opacity: !proofFile ? 0.4 : 1, boxShadow: proofFile ? '0 4px 15px rgba(34,197,94,0.3)' : 'none' }}>{uploadingProof ? '⏳ Mengirim...' : '📤 Kirim Bukti Pembayaran'}</button>
+                      </div>
+                    </>
+                  ) : (
+                    /* Success state */
+                    <>
+                      <div style={{ padding: '18px', borderRadius: 14, background: 'linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05))', border: '1px solid rgba(34,197,94,0.25)', marginBottom: 14 }}>
+                        <div style={{ fontSize: 32, marginBottom: 6 }}>✅</div>
+                        <div style={{ fontSize: 15, color: '#4ade80', fontWeight: 700, marginBottom: 4 }}>Bukti Terkirim!</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>Kami akan verifikasi dan globe akan terbit otomatis setelah pembayaran dikonfirmasi.</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <button onClick={() => setShowPayment(false)} style={{ flex: 1, padding: '13px 0', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Tutup</button>
+                        <a href={`https://wa.me/${waNumber}?text=Halo%20saya%20sudah%20kirim%20bukti%20pembayaran%20dengan%20ID%20${paymentRef}`} target="_blank" rel="noopener noreferrer" style={{ flex: 1.5, padding: '13px 0', borderRadius: 12, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', cursor: 'pointer', fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>🆘 Konfirmasi via WA</a>
+                      </div>
+                    </>
                   )}
-                </div>
+                </>
               )}
             </div>
           </div>

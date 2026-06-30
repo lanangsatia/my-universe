@@ -24,9 +24,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 });
     }
 
-    // Check if there's already a PENDING payment for this user
+    // Check if there's already a PENDING or MANUAL_PENDING payment
     const existingPayment = await prisma.payment.findFirst({
-      where: { userId: user.id, status: 'PENDING' },
+      where: { userId: user.id, status: { in: ['PENDING', 'MANUAL_PENDING'] } },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -34,19 +34,24 @@ export async function POST(req: NextRequest) {
       // Generate a new orderId since the old one was already registered with Midtrans
       const newOrderId = `GLOBE-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-      // Update the existing payment record with the new orderId
+      // Reset status to PENDING (in case it was MANUAL_PENDING) and clear proofUrl, update amount
       await prisma.payment.update({
         where: { id: existingPayment.id },
-        data: { orderId: newOrderId },
+        data: {
+          orderId: newOrderId,
+          status: 'PENDING',
+          proofUrl: null,
+          amount,
+        },
       });
 
-      // Create a fresh Snap transaction with the new orderId
-      const snap = await createSnapTransaction(existingPayment.amount, newOrderId);
+      // Create a fresh Snap transaction with the new orderId and new amount
+      const snap = await createSnapTransaction(amount, newOrderId);
       return NextResponse.json({
         reference_id: newOrderId,
         token: snap.token,
         redirect_url: snap.redirect_url,
-        amount: existingPayment.amount,
+        amount,
         existing: true,
       });
     }
