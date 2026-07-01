@@ -12,6 +12,7 @@ interface Scene3DProps {
   photos?: string[];
   autoRotate?: boolean;
   startAnimation?: number;
+  fixed?: boolean;
   onSceneReady?: (refs: { scene: THREE.Scene; camera: THREE.PerspectiveCamera; renderer: THREE.WebGLRenderer }) => void;
   config?: {
     globeColor?: string;
@@ -68,7 +69,7 @@ function getCachedTexture(url: string): Promise<THREE.Texture> {
   });
 }
 
-export default function Scene3D({ photos = [], autoRotate = true, startAnimation = 0, onSceneReady, config = {} }: Scene3DProps) {
+export default function Scene3D({ photos = [], autoRotate = true, startAnimation = 0, onSceneReady, config = {}, fixed = true }: Scene3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const autoRotateRef = useRef(autoRotate);
   const rotationFactorRef = useRef(1);
@@ -383,9 +384,11 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', onResize);
-      controls.dispose(); renderer.dispose(); composer.dispose();
-      if (mCanvas && mCanvas.parentNode) mCanvas.parentNode.removeChild(mCanvas);
-      if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+      try { controls.dispose(); } catch {}
+      try { composer.dispose(); } catch {}
+      try { renderer.dispose(); } catch {}
+      try { if (mCanvas && mCanvas.parentNode) mCanvas.parentNode.removeChild(mCanvas); } catch {}
+      try { if (renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement); } catch {}
     };
   }, [photos.join(','), configRef.current.globeColor, configRef.current.particleSpeed, configRef.current.rotationSpeed]);
 
@@ -413,5 +416,5 @@ export default function Scene3D({ photos = [], autoRotate = true, startAnimation
     });
   }, [startAnimation]);
 
-  return <div ref={containerRef} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 1 }} />;
+  return <div ref={containerRef} style={fixed ? { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 1 } : { position: 'absolute', inset: 0, width: '100%', height: '100%' }} />;
 }

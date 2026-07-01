@@ -292,11 +292,6 @@ export default function DashboardPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0015 0%, #1a0020 50%, #0a0015 100%)', color: '#fff', fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <div style={{ fontSize: 20, fontWeight: 700 }}><span style={{ color: '#ff6b6b' }}>❤</span> <span  style={{ background: 'linear-gradient(135deg, #ff6b6b, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}><a href='/' style={{ color: 'inherit', textDecoration: 'none' }}>My Universe</a></span></div>
-       
-      </nav>
-
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 20px' }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>Globe Saya</h1>
 
