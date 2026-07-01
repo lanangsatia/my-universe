@@ -63,6 +63,8 @@ export default function Home() {
   const [questionText, setQuestionText] = useState(DEFAULT_QUESTION);
   const [globeConfig, setGlobeConfig] = useState<any>(null);
   const [transitionLoading, setTransitionLoading] = useState(false);
+  const globePrice = Number(process.env.NEXT_PUBLIC_GLOBE_PRICE) || 29999;
+  const formattedPrice = globePrice.toLocaleString('id-ID');
 
   const fetchGuardRef = useRef<boolean | undefined>(undefined);
 
@@ -396,7 +398,7 @@ export default function Home() {
             <div style={{ fontSize: 11, color: '#a855f7', fontWeight: 700, letterSpacing: '3px', textTransform: 'uppercase', marginBottom: 12 }}>✨ Spesial — 1 Paket</div>
             <div style={{ fontSize: 42, fontWeight: 800, marginBottom: 4, lineHeight: 1.1 }}>
               <span style={{ fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,0.5)', verticalAlign: 'super' }}>Rp</span>{' '}
-              <span style={{ background: 'linear-gradient(135deg, #ff6b6b, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>29.999</span>
+              <span style={{ background: 'linear-gradient(135deg, #ff6b6b, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{formattedPrice}</span>
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>bayar sekali · berlaku selamanya</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28, maxWidth: 240, margin: '0 auto 28px' }}>

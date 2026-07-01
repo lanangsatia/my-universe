@@ -425,8 +425,6 @@ Set semua env vars di **Vercel Dashboard → Project Settings → Environment Va
 | `R2_BUCKET_NAME` | R2 bucket name |
 | `R2_PUBLIC_URL` | R2 public URL |
 | `MIDTRANS_SERVER_KEY` | Midtrans production key |
-| `MIDTRANS_CLIENT_KEY` | Midtrans client key |
-| `MIDTRANS_IS_PRODUCTION` | `true` untuk production |
 | `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY` | Sama dengan client key |
 | `NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION` | `true` untuk production |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in` |

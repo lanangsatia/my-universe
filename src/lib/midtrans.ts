@@ -6,12 +6,12 @@ let snap: Midtrans.Snap | null = null;
 function getSnap() {
   if (!snap) {
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
-    const isProduction = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+    const isProduction = process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true';
     if (!serverKey) return null;
     snap = new Midtrans.Snap({
       isProduction,
       serverKey,
-      clientKey: process.env.MIDTRANS_CLIENT_KEY || '',
+      clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
     });
   }
   return snap;
